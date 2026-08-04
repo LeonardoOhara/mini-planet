@@ -1,8 +1,3 @@
-// planet.js
-// Responsável por criar o planeta (mundo esférico) e por fornecer
-// utilitários relacionados à gravidade radial (direção "para cima" em
-// qualquer ponto da superfície = vetor do centro do planeta até o ponto).
-
 import * as THREE from 'three';
 
 export const PLANET_RADIUS = 16;
@@ -59,51 +54,89 @@ export function projectToSurface(position, heightOffset = 0) {
     .multiplyScalar(PLANET_RADIUS + heightOffset);
 }
 
-/**
- * Cria uma placa 3D sobre a superfície do planeta com a mensagem desejada.
- */
-export function createSign(scene, position = new THREE.Vector3(0, 0.9, 1.2)) {
-  const signGroup = new THREE.Group();
-
-  const poleMaterial = new THREE.MeshStandardMaterial({
-    color: 0x8b5a2b,
-    roughness: 0.95,
-  });
-  const pole = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.2, 0.12), poleMaterial);
-  pole.position.y = 0.6;
-  signGroup.add(pole);
-
+function createSignTexture() {
   const canvas = document.createElement('canvas');
   canvas.width = 1024;
-  canvas.height = 384;
+  canvas.height = 512;
+
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#f7e8c7';
+  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  gradient.addColorStop(0, '#fff6e4');
+  gradient.addColorStop(1, '#f7ddb3');
+  ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.strokeStyle = '#8b5a2b';
-  ctx.lineWidth = 22;
-  ctx.strokeRect(24, 24, canvas.width - 48, canvas.height - 48);
-  ctx.fillStyle = '#6d2f1f';
-  ctx.font = 'bold 100px "Segoe UI", Arial, sans-serif';
+
+  ctx.strokeStyle = '#8b4b2d';
+  ctx.lineWidth = 28;
+  ctx.strokeRect(28, 28, canvas.width - 56, canvas.height - 56);
+
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+  ctx.lineWidth = 8;
+  ctx.strokeRect(52, 52, canvas.width - 104, canvas.height - 104);
+
+  ctx.fillStyle = '#2f1b0c';
+  ctx.font = 'bold 106px "Segoe UI", Arial, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('ÉRIKA TE AMO ♥', canvas.width / 2, canvas.height / 2);
+  ctx.fillText('ERIKA TE AMO', canvas.width / 2, canvas.height / 2 - 32);
+
+  ctx.fillStyle = '#c73652';
+  ctx.font = 'bold 122px "Segoe UI Symbol", "Segoe UI", Arial, sans-serif';
+  ctx.fillText('♥', canvas.width / 2, canvas.height / 2 + 116);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
 
-  const boardMaterial = new THREE.MeshStandardMaterial({
+/**
+ * Cria uma placa 3D na superfície do planeta com material não iluminado.
+ */
+export function createSign(scene, position = new THREE.Vector3(0, 0.9, -1.25)) {
+  const signGroup = new THREE.Group();
+
+  const poleMaterial = new THREE.MeshStandardMaterial({
+    color: 0x6f4e37,
+    roughness: 0.92,
+  });
+
+  const leftPole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 1.08, 12), poleMaterial);
+  leftPole.position.set(-0.72, 0.54, 0);
+  signGroup.add(leftPole);
+
+  const rightPole = leftPole.clone();
+  rightPole.position.x = 0.72;
+  signGroup.add(rightPole);
+
+  const boardCore = new THREE.Mesh(
+    new THREE.BoxGeometry(2.56, 1.34, 0.12),
+    new THREE.MeshStandardMaterial({
+      color: 0x9b633b,
+      roughness: 0.88,
+      metalness: 0.02,
+    })
+  );
+  boardCore.position.y = 1.3;
+  signGroup.add(boardCore);
+
+  const texture = createSignTexture();
+  const boardMaterial = new THREE.MeshBasicMaterial({
     map: texture,
-    color: 0xffffff,
-    roughness: 0.9,
     transparent: true,
   });
-  const board = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.95, 0.12), boardMaterial);
-  board.position.y = 1.45;
-  board.position.z = 0.06;
-  signGroup.add(board);
+  const boardGeometry = new THREE.PlaneGeometry(2.34, 1.12);
+
+  const frontFace = new THREE.Mesh(boardGeometry, boardMaterial);
+  frontFace.position.set(0, 1.3, 0.066);
+  signGroup.add(frontFace);
+
+  const backFace = new THREE.Mesh(boardGeometry, boardMaterial.clone());
+  backFace.position.set(0, 1.3, -0.066);
+  backFace.rotation.y = Math.PI;
+  signGroup.add(backFace);
 
   const surfaceNormal = getSurfaceNormal(position);
-  signGroup.position.copy(projectToSurface(position, 0.25));
+  signGroup.position.copy(projectToSurface(position, 0.2));
   signGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), surfaceNormal);
 
   scene.add(signGroup);

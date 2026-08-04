@@ -3,9 +3,11 @@
 // respeitando o "up" local (normal da esfera) e o pitch controlado pelo mouse.
 
 import * as THREE from 'three';
+import { PLANET_RADIUS } from './planet.js';
 
 const DISTANCE = 6.5;
 const HEIGHT = 2.2;
+const CAMERA_SURFACE_MARGIN = 0.45;
 
 export class ThirdPersonCamera {
   constructor(camera) {
@@ -27,6 +29,10 @@ export class ThirdPersonCamera {
     offset.applyQuaternion(pitchQuat);
 
     this._desiredPos.copy(player.position).add(offset);
+    const minCameraRadius = PLANET_RADIUS + CAMERA_SURFACE_MARGIN;
+    if (this._desiredPos.length() < minCameraRadius) {
+      this._desiredPos.normalize().multiplyScalar(minCameraRadius);
+    }
     this.camera.position.lerp(this._desiredPos, 1); // segue diretamente (sem atraso) para o MVP
 
     this._lookTarget.copy(player.position).addScaledVector(up, 1.3);

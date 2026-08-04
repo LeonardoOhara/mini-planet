@@ -9,22 +9,47 @@ function createSingleTree() {
   const tree = new THREE.Group();
 
   const trunkHeight = 1.6 + Math.random() * 0.8;
-  const trunkGeo = new THREE.CylinderGeometry(0.12, 0.16, trunkHeight, 6);
-  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b4423, roughness: 1 });
+  const trunkGeo = new THREE.CylinderGeometry(0.12, 0.18, trunkHeight, 8);
+  const trunkMat = new THREE.MeshStandardMaterial({ 
+    color: 0x5c3d2e, 
+    roughness: 0.95,
+    metalness: 0.0
+  });
   const trunk = new THREE.Mesh(trunkGeo, trunkMat);
   trunk.position.y = trunkHeight / 2;
   trunk.castShadow = true;
   trunk.receiveShadow = true;
   tree.add(trunk);
 
-  const foliageHeight = 1.8 + Math.random() * 1.0;
-  const foliageGeo = new THREE.ConeGeometry(0.9 + Math.random() * 0.3, foliageHeight, 8);
-  const foliageMat = new THREE.MeshStandardMaterial({ color: 0x2f6b3a, roughness: 0.9 });
-  const foliage = new THREE.Mesh(foliageGeo, foliageMat);
-  foliage.position.y = trunkHeight + foliageHeight / 2 - 0.2;
-  foliage.castShadow = true;
-  foliage.receiveShadow = true;
-  tree.add(foliage);
+  // Primeira camada de folhagem (base, maior)
+  const foliageHeight1 = 1.4 + Math.random() * 0.8;
+  const foliageRadius1 = 1.0 + Math.random() * 0.4;
+  const foliageGeo1 = new THREE.ConeGeometry(foliageRadius1, foliageHeight1, 12);
+  const foliageMat1 = new THREE.MeshStandardMaterial({ 
+    color: 0x228B22, 
+    roughness: 0.85,
+    metalness: 0.0
+  });
+  const foliage1 = new THREE.Mesh(foliageGeo1, foliageMat1);
+  foliage1.position.y = trunkHeight + foliageHeight1 / 2 - 0.3;
+  foliage1.castShadow = true;
+  foliage1.receiveShadow = true;
+  tree.add(foliage1);
+
+  // Segunda camada de folhagem (topo, menor)
+  const foliageHeight2 = 0.8 + Math.random() * 0.5;
+  const foliageRadius2 = foliageRadius1 * 0.65;
+  const foliageGeo2 = new THREE.ConeGeometry(foliageRadius2, foliageHeight2, 12);
+  const foliageMat2 = new THREE.MeshStandardMaterial({ 
+    color: 0x32CD32, 
+    roughness: 0.80,
+    metalness: 0.0
+  });
+  const foliage2 = new THREE.Mesh(foliageGeo2, foliageMat2);
+  foliage2.position.y = foliage1.position.y + foliageHeight1 * 0.4;
+  foliage2.castShadow = true;
+  foliage2.receiveShadow = true;
+  tree.add(foliage2);
 
   return tree;
 }
