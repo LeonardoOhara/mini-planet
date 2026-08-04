@@ -43,9 +43,34 @@
     </div>
     <div id="touch-label">Arraste para olhar. Toque duplo e segure para correr.</div>
   </div>
+  <div id="radial-left" class="radial-control" aria-label="Controle esquerdo">
+    <div class="radial-base"></div>
+    <div class="radial-knob"></div>
+  </div>
+  <div id="radial-right" class="radial-control" aria-label="Controle direito">
+    <div class="radial-base"></div>
+    <div class="radial-knob"></div>
+  </div>
 
-  <div id="radial-left" class="radial-control" aria-label="Controle esquerdo"></div>
-  <div id="radial-right" class="radial-control" aria-label="Controle direito"></div>
+  <!-- GameBoy-style overlay -->
+  <div id="gb-overlay" class="gb-overlay">
+    <div class="gb-body">
+      <!-- Actions kept (A/B) -->
+      <div class="gb-actions">
+        <button id="gb-b" class="gb-button touch-button action-button">B</button>
+        <button id="gb-a" class="gb-button touch-button action-button">A</button>
+      </div>
+    </div>
+    <!-- Two analog sticks fixed to corners for mobile vertical -->
+    <div id="gb-left-stick" class="gb-stick" aria-hidden="false">
+      <div class="gb-stick-base"></div>
+      <div class="gb-stick-knob"></div>
+    </div>
+    <div id="gb-right-stick" class="gb-stick" aria-hidden="false">
+      <div class="gb-stick-base"></div>
+      <div class="gb-stick-knob"></div>
+    </div>
+  </div>
 
   <div id="blocker">
     <div id="instructions">
