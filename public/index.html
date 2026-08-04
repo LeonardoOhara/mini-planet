@@ -55,6 +55,7 @@
   <!-- GameBoy-style overlay -->
   <div id="gb-overlay" class="gb-overlay">
     <div class="gb-body">
+      <div id="gb-orb" aria-label="Orbita camera"></div>
       <!-- Actions kept (A/B) -->
       <div class="gb-actions">
         <button id="gb-b" class="gb-button touch-button action-button">B</button>
@@ -90,6 +91,11 @@
     </div>
   </div>
 
+  <!-- Mobile zoom bar (drag to zoom) -->
+  <div id="zoom-bar" aria-hidden="false">
+    <div class="zoom-track"></div>
+    <div class="zoom-thumb"></div>
+  </div>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

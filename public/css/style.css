@@ -477,6 +477,67 @@ html, body {
   }
 }
 
+/* GB orb: small draggable circle above A/B for 360° camera rotation (mobile) */
+@media (max-width: 900px) {
+  #gb-orb {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.95);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+    position: absolute;
+    top: -26px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 12;
+    touch-action: none;
+  }
+}
+
+@media (min-width: 901px) {
+  #gb-orb { display: none !important; }
+}
+
+/* Zoom bar on mobile: thin vertical track at right edge */
+@media (max-width: 900px) {
+  #zoom-bar {
+    position: fixed;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 220px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+  }
+  #zoom-bar .zoom-track {
+    position: absolute;
+    width: 6px;
+    height: 100%;
+    background: rgba(255,255,255,0.06);
+    border-radius: 6px;
+    box-shadow: inset 0 0 6px rgba(0,0,0,0.35);
+  }
+  #zoom-bar .zoom-thumb {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: rgba(255,255,255,0.95);
+    border-radius: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+    touch-action: none;
+  }
+}
+
+@media (min-width: 901px) {
+  #zoom-bar { display: none !important; }
+}
+
 @media (orientation: landscape) and (max-width: 900px) {
   #touch-controls {
     bottom: 18px;

@@ -42,6 +42,11 @@ const INTERACT_KEY = 'KeyE';
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
 let lastTouchPoint = null;
 let pinchDistance = null;
+// Zoom bar vars
+const zoomBar = document.getElementById('zoom-bar');
+const zoomThumb = zoomBar?.querySelector('.zoom-thumb');
+let zoomDragging = false;
+let zoomLastY = 0;
 
 youtubeClose.addEventListener('click', () => {
   youtubeOverlay.classList.add('hidden');
@@ -310,8 +315,11 @@ canvas.addEventListener('touchmove', (event) => {
     const delta = nextDistance - pinchDistance;
     thirdPersonCamera.adjustZoom(-delta * 0.01);
     pinchDistance = nextDistance;
+    if (typeof updateThumbPos === 'function') updateThumbPos();
   }
 }, { passive: false });
+
+
 
 canvas.addEventListener('touchend', (event) => {
   if (event.touches.length >= 2) {
@@ -340,6 +348,84 @@ canvas.addEventListener('touchend', (event) => {
 const player = new Player(scene, sceneObstacles);
 const controls = new Controls(canvas);
 const thirdPersonCamera = new ThirdPersonCamera(camera);
+
+// Zoom bar touch / pointer handling (needs thirdPersonCamera available)
+if (zoomBar && zoomThumb) {
+  const updateThumbPos = () => {
+    const min = 3.5;
+    const max = 12.0;
+    const dist = thirdPersonCamera.distance;
+    const ratio = (dist - min) / (max - min);
+    const barRect = zoomBar.getBoundingClientRect();
+    const y = barRect.top + (1 - Math.max(0, Math.min(1, ratio))) * barRect.height;
+    zoomThumb.style.top = `${y - barRect.top}px`;
+  };
+
+  const onStart = (y) => {
+    zoomDragging = true;
+    zoomLastY = y;
+  };
+
+  const onMove = (y) => {
+    if (!zoomDragging) return;
+    const delta = zoomLastY - y; // positive when moving up
+    const speed = 0.04;
+    thirdPersonCamera.adjustZoom(-delta * speed);
+    zoomLastY = y;
+    updateThumbPos();
+  };
+
+  const onEnd = () => {
+    zoomDragging = false;
+  };
+
+  // Touch
+  zoomBar.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const t = e.touches[0];
+    onStart(t.clientY);
+  }, { passive: false });
+  zoomBar.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const t = e.touches[0];
+    onMove(t.clientY);
+  }, { passive: false });
+  zoomBar.addEventListener('touchend', (e) => { e.preventDefault(); onEnd(); }, { passive: false });
+
+  // Pointer (mouse) support
+  zoomBar.addEventListener('pointerdown', (e) => { e.preventDefault(); onStart(e.clientY); zoomBar.setPointerCapture(e.pointerId); }, { passive: false });
+  zoomBar.addEventListener('pointermove', (e) => { e.preventDefault(); onMove(e.clientY); }, { passive: false });
+  zoomBar.addEventListener('pointerup', (e) => { onEnd(); }, { passive: false });
+
+  // update on load
+  updateThumbPos();
+}
+
+// GB orb: drag horizontally to rotate camera (yaw)
+const gbOrb = document.getElementById('gb-orb');
+if (gbOrb) {
+  let orbDragging = false;
+  let orbLastX = 0;
+  const orbSensitivity = 0.008; // tuned sensitivity
+
+  const onOrbStart = (x) => { orbDragging = true; orbLastX = x; };
+  const onOrbMove = (x) => {
+    if (!orbDragging) return;
+    const dx = x - orbLastX;
+    // negative dx -> yaw increases left? player.update uses controls.yaw applied as rotation around up
+    controls.yaw -= dx * orbSensitivity;
+    orbLastX = x;
+  };
+  const onOrbEnd = () => { orbDragging = false; };
+
+  gbOrb.addEventListener('touchstart', (e) => { e.preventDefault(); const t = e.touches[0]; onOrbStart(t.clientX); }, { passive: false });
+  gbOrb.addEventListener('touchmove', (e) => { e.preventDefault(); const t = e.touches[0]; onOrbMove(t.clientX); }, { passive: false });
+  gbOrb.addEventListener('touchend', (e) => { e.preventDefault(); onOrbEnd(); }, { passive: false });
+
+  gbOrb.addEventListener('pointerdown', (e) => { e.preventDefault(); onOrbStart(e.clientX); gbOrb.setPointerCapture(e.pointerId); }, { passive: false });
+  gbOrb.addEventListener('pointermove', (e) => { e.preventDefault(); onOrbMove(e.clientX); }, { passive: false });
+  gbOrb.addEventListener('pointerup', (e) => { onOrbEnd(); }, { passive: false });
+}
 
 canvas.addEventListener('wheel', (event) => {
   event.preventDefault();
