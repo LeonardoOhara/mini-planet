@@ -3,7 +3,7 @@
 // (planeta, jogador, controles, câmera, árvores) e roda o loop principal.
 
 import * as THREE from 'three';
-import { createPlanet, createSign } from './planet.js';
+import { createPlanet, createSign, createTubeTV } from './planet.js';
 import { createTrees } from './trees.js';
 import { createHouses } from './houses.js';
 import { createGrass } from './grass.js';
@@ -29,6 +29,49 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+const centerPointer = new THREE.Vector2(0, 0);
+const youtubeOverlay = document.getElementById('youtube-overlay');
+const youtubeIframe = document.getElementById('youtube-iframe');
+const youtubeClose = document.getElementById('youtube-close');
+const interactionHint = document.getElementById('interaction-hint');
+const VIDEO_HINT_DISTANCE = 3.0;
+const INTERACT_KEY = 'KeyE';
+
+youtubeClose.addEventListener('click', () => {
+  youtubeOverlay.classList.add('hidden');
+  youtubeOverlay.classList.remove('visible');
+  youtubeIframe.src = '';
+});
+
+youtubeOverlay.querySelector('.overlay-backdrop').addEventListener('click', () => {
+  youtubeClose.click();
+});
+
+function openYoutubeOverlay(videoId) {
+  youtubeIframe.src = `https://www.youtube.com/embed/${videoId}?rel=0&showinfo=0&autoplay=1&mute=0`;
+  youtubeOverlay.classList.remove('hidden');
+  youtubeOverlay.classList.add('visible');
+  if (document.pointerLockElement === canvas) {
+    document.exitPointerLock();
+  }
+}
+
+function isLookingAtTubeTV() {
+  raycaster.setFromCamera(centerPointer, camera);
+  const intersects = raycaster.intersectObject(tubeTV, true);
+  return intersects.length > 0;
+}
+
+function handleInteractionKey(event) {
+  if (event.code !== INTERACT_KEY) return;
+  const distance = player.position.distanceTo(tubeTV.position);
+  if (distance > VIDEO_HINT_DISTANCE) return;
+  if (!isLookingAtTubeTV()) return;
+  openYoutubeOverlay(tubeTV.userData.videoId);
+}
 
 // --- Iluminação ---
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
@@ -164,18 +207,52 @@ function updateDayNight(playerPosition, delta) {
   }
 }
 
+function updateTVCalloutAnimation(time) {
+  if (!tubeTV?.userData?.callout) return;
+  const callout = tubeTV.userData.callout;
+  callout.position.y = 1.55 + Math.sin(time * 2.2) * 0.05;
+  callout.rotation.z = Math.sin(time * 1.8) * 0.06;
+}
+
 // --- Mundo ---
 const planet = createPlanet(scene);
-createSign(scene, new THREE.Vector3(0, 0.9, -1.25));
+const sign = createSign(scene, new THREE.Vector3(0, 0.9, -1.25));
+const tubeTV = createTubeTV(scene, 'hIxQU0IlDqw', new THREE.Vector3(1.8, 0.9, 0.3));
 const grass = createGrass(scene, 280);
 const treeObstacles = createTrees(scene, 70);
 const houseObstacles = createHouses(scene, 12);
-const sceneObstacles = [...treeObstacles, ...houseObstacles];
+const sceneObstacles = [
+  ...treeObstacles,
+  ...houseObstacles,
+  sign.userData.obstacle,
+  tubeTV.userData.obstacle,
+];
+
+canvas.addEventListener('click', (event) => {
+  pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const intersects = raycaster.intersectObject(tubeTV, true);
+  if (intersects.length > 0) {
+    const hit = intersects[0].object;
+    const videoId = hit.userData.videoId || tubeTV.userData.videoId;
+    if (videoId) {
+      openYoutubeOverlay(videoId);
+    }
+  }
+});
 
 // --- Jogador, controles e câmera ---
 const player = new Player(scene, sceneObstacles);
 const controls = new Controls(canvas);
 const thirdPersonCamera = new ThirdPersonCamera(camera);
+
+canvas.addEventListener('wheel', (event) => {
+  event.preventDefault();
+  thirdPersonCamera.adjustZoom(event.deltaY);
+}, { passive: false });
+
+document.addEventListener('keydown', handleInteractionKey);
 
 // --- HUD simples de FPS ---
 const fpsEl = document.getElementById('fps');
@@ -194,6 +271,8 @@ function animate() {
   if (planet) planet.rotation.y += delta * 0.08;
   player.update(delta, controls);
   thirdPersonCamera.update(player, controls);
+  updateInteractionHint(player.position, tubeTV.position);
+  updateTVCalloutAnimation(clock.elapsedTime);
 
   renderer.render(scene, camera);
 
@@ -205,6 +284,19 @@ function animate() {
     frameCount = 0;
     fpsTimer = 0;
   }
+}
+
+function updateInteractionHint(playerPos, billboardPos) {
+  const distance = playerPos.distanceTo(billboardPos);
+  const visible = distance <= VIDEO_HINT_DISTANCE;
+  if (visible) {
+    interactionHint.textContent = isLookingAtTubeTV()
+      ? 'Pressione E ou clique para assistir'
+      : 'Aponte para a TV e pressione E';
+  } else {
+    interactionHint.textContent = 'Aproxime-se da TV para assistir';
+  }
+  interactionHint.classList.toggle('visible', visible);
 }
 
 animate();

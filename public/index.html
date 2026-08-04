@@ -26,6 +26,8 @@
     <span id="fps">-- fps</span>
   </div>
 
+  <div id="interaction-hint" class="hidden">Clique para abrir o vídeo</div>
+
   <div id="touch-controls" class="hidden">
     <div id="touch-dpad">
       <span class="touch-spacer"></span>
@@ -49,6 +51,14 @@
       <p class="controls">
         WASD — mover &nbsp;|&nbsp; SHIFT — correr &nbsp;|&nbsp; ESPAÇO — pular &nbsp;|&nbsp; MOUSE/TOQUE — olhar ao redor
       </p>
+    </div>
+  </div>
+
+  <div id="youtube-overlay" class="hidden">
+    <div class="overlay-backdrop"></div>
+    <div class="overlay-content">
+      <button id="youtube-close" type="button">×</button>
+      <iframe id="youtube-iframe" src="" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
     </div>
   </div>
 

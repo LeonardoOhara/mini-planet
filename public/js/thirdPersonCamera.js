@@ -5,15 +5,29 @@
 import * as THREE from 'three';
 import { PLANET_RADIUS } from './planet.js';
 
-const DISTANCE = 6.5;
-const HEIGHT = 2.2;
+const DEFAULT_DISTANCE = 6.5;
+const DEFAULT_HEIGHT = 2.2;
+const MIN_DISTANCE = 3.5;
+const MAX_DISTANCE = 12.0;
 const CAMERA_SURFACE_MARGIN = 0.45;
 
 export class ThirdPersonCamera {
   constructor(camera) {
     this.camera = camera;
+    this.distance = DEFAULT_DISTANCE;
+    this.height = DEFAULT_HEIGHT;
     this._desiredPos = new THREE.Vector3();
     this._lookTarget = new THREE.Vector3();
+  }
+
+  adjustZoom(deltaY) {
+    const zoomSpeed = 0.008;
+    this.distance = THREE.MathUtils.clamp(
+      this.distance + deltaY * zoomSpeed,
+      MIN_DISTANCE,
+      MAX_DISTANCE
+    );
+    this.height = DEFAULT_HEIGHT * (this.distance / DEFAULT_DISTANCE);
   }
 
   update(player, controls) {
@@ -22,7 +36,7 @@ export class ThirdPersonCamera {
     const right = new THREE.Vector3().crossVectors(forward, up).normalize();
 
     // Offset base: atrás e acima do jogador
-    let offset = forward.clone().multiplyScalar(-DISTANCE).addScaledVector(up, HEIGHT);
+    let offset = forward.clone().multiplyScalar(-this.distance).addScaledVector(up, this.height);
 
     // Aplica o pitch (olhar para cima/baixo) rotacionando o offset em torno do eixo "right"
     const pitchQuat = new THREE.Quaternion().setFromAxisAngle(right, controls.pitch);

@@ -16,6 +16,21 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/vendor/three', express.static(path.join(__dirname, 'node_modules', 'three', 'build')));
 app.use('/vendor/three/examples/jsm', express.static(path.join(__dirname, 'node_modules', 'three', 'examples', 'jsm')));
 
-app.listen(PORT, () => {
-  console.log(`Mini Planet rodando em http://localhost:${PORT}`);
-});
+function listen(port, attempts = 0) {
+  const server = app.listen(port, () => {
+    console.log(`Mini Planet rodando em http://localhost:${port}`);
+  });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE' && attempts < 5) {
+      console.warn(`Porta ${port} ocupada. Tentando a próxima porta...`);
+      listen(port + 1, attempts + 1);
+      return;
+    }
+
+    console.error('Falha ao iniciar o servidor:', err);
+    process.exit(1);
+  });
+}
+
+listen(PORT);
