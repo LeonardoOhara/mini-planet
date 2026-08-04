@@ -42,6 +42,12 @@ const INTERACT_KEY = 'KeyE';
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
 let lastTouchPoint = null;
 let pinchDistance = null;
+let lastTapTime = 0;
+let lastTapX = 0;
+let lastTapY = 0;
+let doubleTapActive = false;
+let doubleTapStartY = 0;
+let doubleTapMoved = false;
 // Zoom bar vars
 const zoomBar = document.getElementById('zoom-bar');
 const zoomThumb = zoomBar?.querySelector('.zoom-thumb');
@@ -302,6 +308,22 @@ canvas.addEventListener('touchstart', (event) => {
   if (event.touches.length === 1) {
     const touch = event.touches[0];
     lastTouchPoint = { x: touch.clientX, y: touch.clientY };
+
+    // detect double-tap start
+    const now = performance.now();
+    const dt = now - lastTapTime;
+    const dist = Math.hypot(touch.clientX - lastTapX, touch.clientY - lastTapY);
+    if (dt < 300 && dist < 30) {
+      // begin double-tap zoom interaction
+      doubleTapActive = true;
+      doubleTapStartY = touch.clientY;
+      doubleTapMoved = false;
+      // prevent default double-tap-to-zoom browser behavior
+      event.preventDefault();
+    }
+    lastTapTime = now;
+    lastTapX = touch.clientX;
+    lastTapY = touch.clientY;
   }
 }, { passive: true });
 
@@ -316,6 +338,19 @@ canvas.addEventListener('touchmove', (event) => {
     thirdPersonCamera.adjustZoom(-delta * 0.01);
     pinchDistance = nextDistance;
     if (typeof updateThumbPos === 'function') updateThumbPos();
+    return;
+  }
+
+  // double-tap + drag to zoom
+  if (doubleTapActive && event.touches.length === 1) {
+    const t = event.touches[0];
+    const dy = t.clientY - doubleTapStartY;
+    // apply proportional zoom (moving up zooms in)
+    thirdPersonCamera.adjustZoom(dy * 0.6);
+    doubleTapMoved = true;
+    if (typeof updateThumbPos === 'function') updateThumbPos();
+    event.preventDefault();
+    return;
   }
 }, { passive: false });
 
@@ -325,6 +360,29 @@ canvas.addEventListener('touchend', (event) => {
   if (event.touches.length >= 2) {
     pinchDistance = null;
     return;
+  }
+
+  // handle end of double-tap interaction: if it was a quick double-tap without drag, animate zoom in
+  if (doubleTapActive) {
+    if (!doubleTapMoved) {
+      // quick double-tap -> smooth zoom in
+      const oldDist = thirdPersonCamera.distance;
+      const target = Math.max(3.5, oldDist * 0.7);
+      const oldHeight = thirdPersonCamera.height;
+      const startTime = performance.now();
+      const duration = 220;
+      const animate = () => {
+        const t = Math.min(1, (performance.now() - startTime) / duration);
+        const v = oldDist + (target - oldDist) * t;
+        thirdPersonCamera.distance = v;
+        thirdPersonCamera.height = oldHeight * (v / oldDist);
+        if (t < 1) requestAnimationFrame(animate);
+        else if (typeof updateThumbPos === 'function') updateThumbPos();
+      };
+      requestAnimationFrame(animate);
+    }
+    doubleTapActive = false;
+    doubleTapMoved = false;
   }
 
   if (!lastTouchPoint) return;
@@ -383,19 +441,43 @@ if (zoomBar && zoomThumb) {
   zoomBar.addEventListener('touchstart', (e) => {
     e.preventDefault();
     const t = e.touches[0];
+    console.debug('zoomBar touchstart', t?.clientY);
     onStart(t.clientY);
   }, { passive: false });
   zoomBar.addEventListener('touchmove', (e) => {
     e.preventDefault();
+    // If user uses two fingers to scroll vertically on the bar, use the average Y
+    if (e.touches && e.touches.length === 2) {
+      const y = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      onMove(y);
+      return;
+    }
     const t = e.touches[0];
     onMove(t.clientY);
   }, { passive: false });
   zoomBar.addEventListener('touchend', (e) => { e.preventDefault(); onEnd(); }, { passive: false });
 
+  // Some browsers prefer pointer events; ensure fallback logs for debugging
+  zoomBar.addEventListener('pointerdown', (e) => {
+    console.debug('zoomBar pointerdown', e.clientY, e.pointerId);
+    e.preventDefault(); onStart(e.clientY); zoomBar.setPointerCapture(e.pointerId);
+  }, { passive: false });
+  zoomBar.addEventListener('pointermove', (e) => { if (zoomDragging) onMove(e.clientY); }, { passive: false });
+  zoomBar.addEventListener('pointerup', (e) => { onEnd(); }, { passive: false });
+
   // Pointer (mouse) support
   zoomBar.addEventListener('pointerdown', (e) => { e.preventDefault(); onStart(e.clientY); zoomBar.setPointerCapture(e.pointerId); }, { passive: false });
   zoomBar.addEventListener('pointermove', (e) => { e.preventDefault(); onMove(e.clientY); }, { passive: false });
   zoomBar.addEventListener('pointerup', (e) => { onEnd(); }, { passive: false });
+
+  // Wheel support: allow mouse wheel or emulated wheel to change zoom
+  zoomBar.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY || e.wheelDelta || 0;
+    // feed to adjustZoom; positive delta -> zoom out
+    thirdPersonCamera.adjustZoom(delta);
+    updateThumbPos();
+  }, { passive: false });
 
   // update on load
   updateThumbPos();

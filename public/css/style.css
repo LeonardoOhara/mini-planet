@@ -512,6 +512,7 @@ html, body {
     align-items: center;
     justify-content: center;
     pointer-events: auto;
+    touch-action: none;
   }
   #zoom-bar .zoom-track {
     position: absolute;
@@ -529,6 +530,7 @@ html, body {
     border-radius: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+    top: 50%;
     box-shadow: 0 6px 14px rgba(0,0,0,0.35);
     touch-action: none;
   }
