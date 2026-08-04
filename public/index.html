@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mini Planet - MVP 3D</title>
+  <link rel="stylesheet" href="css/style.css" />
+
+  <!-- Import map: permite usar "import * as THREE from 'three'" no navegador,
+       apontando para o pacote three.js servido pelo próprio Express. -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/vendor/three/three.module.js",
+        "three/examples/jsm/": "/vendor/three/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+
+  <div id="crosshair"></div>
+
+  <div id="hud">
+    <span id="fps">-- fps</span>
+  </div>
+
+  <div id="blocker">
+    <div id="instructions">
+      <h1>Mini Planet</h1>
+      <p>Clique para jogar</p>
+      <p class="controls">
+        WASD — mover &nbsp;|&nbsp; SHIFT — correr &nbsp;|&nbsp; ESPAÇO — pular &nbsp;|&nbsp; MOUSE — olhar ao redor
+      </p>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
