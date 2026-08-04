@@ -351,11 +351,11 @@ const sign = createSign(scene, new THREE.Vector3(0, 0.9, -1.25));
 const tubeTV = createTubeTV(scene, 'hIxQU0IlDqw', new THREE.Vector3(1.8, 0.9, 0.3));
 const arcadeMachine = createArcadeMachine(
   scene,
-  'https://www.retrogames.cc/embed/44252-smw-nes-fixed-physics.html',
+  'https://www.retrogames.cc/embed/28355-toe-jam-earl-usa-europe.html',
   new THREE.Vector3(-1.8, 0.9, 0.3)
 );
 const grass = createGrass(scene, 280);
-const treeObstacles = createTrees(scene, 70);
+const treeObstacles = createTrees(scene, 9);
 const houseObstacles = createHouses(scene, 12);
 const sceneObstacles = [
   ...treeObstacles,

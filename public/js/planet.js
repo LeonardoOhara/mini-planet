@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export const PLANET_RADIUS = 5;
+export const PLANET_RADIUS = 12;
 
 /**
  * Cria o mesh do planeta e o adiciona à cena.
@@ -136,7 +136,7 @@ export function createSign(scene, position = new THREE.Vector3(0, 0.9, -1.25)) {
   signGroup.add(backFace);
 
   const surfaceNormal = getSurfaceNormal(position);
-  signGroup.position.copy(projectToSurface(position, 0.2));
+  signGroup.position.copy(projectToSurface(position, 0.0));
   signGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), surfaceNormal);
   signGroup.userData.obstacle = {
     position: signGroup.position.clone(),
@@ -160,7 +160,7 @@ export function createTubeTV(scene, videoId = 'dQw4w9WgXcQ', position = new THRE
     new THREE.BoxGeometry(2.2, 0.18, 1.0),
     dresserMaterial
   );
-  dresserTop.position.y = 0.6;
+  dresserTop.position.y = 0.63;
   tvGroup.add(dresserTop);
 
   const drawerMaterial = new THREE.MeshStandardMaterial({
@@ -174,14 +174,14 @@ export function createTubeTV(scene, videoId = 'dQw4w9WgXcQ', position = new THRE
       new THREE.BoxGeometry(2.14, 0.18, 0.28),
       drawerMaterial
     );
-    drawer.position.set(0, 0.38 - i * 0.18, 0);
+    drawer.position.set(0, 0.09 + i * 0.18, 0);
     tvGroup.add(drawer);
 
     const handle = new THREE.Mesh(
       new THREE.BoxGeometry(0.42, 0.04, 0.02),
       new THREE.MeshStandardMaterial({ color: 0x23190f, roughness: 0.8 })
     );
-    handle.position.set(0, 0.38 - i * 0.18, 0.16);
+    handle.position.set(0, 0.09 + i * 0.18, 0.16);
     tvGroup.add(handle);
   }
 
@@ -226,14 +226,14 @@ export function createTubeTV(scene, videoId = 'dQw4w9WgXcQ', position = new THRE
     new THREE.MeshStandardMaterial({ color: 0x1b1b1b, roughness: 0.7 })
   );
   tvSpeaker.rotation.z = Math.PI / 2;
-  tvSpeaker.position.set(0, 1.15, 0.25);
+  tvSpeaker.position.set(0, 1.17, 0.25);
   tvGroup.add(tvSpeaker);
 
   const tvAntennaLeft = new THREE.Mesh(
     new THREE.CylinderGeometry(0.02, 0.02, 0.9, 8),
     new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.3 })
   );
-  tvAntennaLeft.position.set(-0.35, 1.55, 0);
+  tvAntennaLeft.position.set(-0.35, 1.57, 0);
   tvAntennaLeft.rotation.x = -Math.PI / 6;
   tvGroup.add(tvAntennaLeft);
 
@@ -243,7 +243,7 @@ export function createTubeTV(scene, videoId = 'dQw4w9WgXcQ', position = new THRE
   tvGroup.add(tvAntennaRight);
 
   const surfaceNormal = getSurfaceNormal(position);
-  tvGroup.position.copy(projectToSurface(position, 0.02));
+  tvGroup.position.copy(projectToSurface(position, 0.0));
   tvGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), surfaceNormal);
 
   tvGroup.userData = {

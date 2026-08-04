@@ -130,7 +130,7 @@ export function createArcadeMachine(scene, gameUrl = '', position = new THREE.Ve
   arcadeGroup.add(footRight);
 
   const surfaceNormal = getSurfaceNormal(position);
-  arcadeGroup.position.copy(projectToSurface(position, 0.03));
+  arcadeGroup.position.copy(projectToSurface(position, 0.0));
   arcadeGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), surfaceNormal);
 
   arcadeGroup.userData = {
