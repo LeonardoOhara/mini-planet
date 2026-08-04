@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mini Planet - MVP 3D</title>
+  <title>My tiny world</title>
   <link rel="stylesheet" href="css/style.css" />
+  <link rel="icon" type="image/x-icon" href="assets/logo/earth.ico" />
+  <link rel="shortcut icon" href="assets/logo/earth.ico" />
 
   <!-- Import map: permite usar "import * as THREE from 'three'" no navegador,
        apontando para o pacote three.js servido pelo próprio Express. -->
@@ -73,7 +75,7 @@
     </div>
   </div>
 
-  <div id="blocker">
+  <div id="blocker" class="hidden">
     <div id="instructions">
       <h1>Mini Planet</h1>
       <p>Toque para jogar ou clique para entrar.</p>
@@ -88,6 +90,17 @@
     <div class="overlay-content">
       <button id="youtube-close" type="button">×</button>
       <iframe id="youtube-iframe" src="" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <div id="arcade-overlay" class="hidden">
+    <div class="overlay-backdrop"></div>
+    <div class="overlay-content arcade-content">
+      <div class="arcade-titlebar">
+        <span>Arcade</span>
+        <button id="arcade-close" type="button" class="overlay-close-button">×</button>
+      </div>
+      <iframe id="arcade-iframe" src="" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
     </div>
   </div>
 

@@ -4,6 +4,7 @@
 
 import * as THREE from 'three';
 import { createPlanet, createSign, createTubeTV } from './planet.js';
+import { createArcadeMachine } from './arcade.js';
 import { createTrees } from './trees.js';
 import { createHouses } from './houses.js';
 import { createGrass } from './grass.js';
@@ -36,6 +37,8 @@ const centerPointer = new THREE.Vector2(0, 0);
 const youtubeOverlay = document.getElementById('youtube-overlay');
 const youtubeIframe = document.getElementById('youtube-iframe');
 const youtubeClose = document.getElementById('youtube-close');
+const arcadeOverlay = document.getElementById('arcade-overlay');
+const arcadeIframe = document.getElementById('arcade-iframe');
 const interactionHint = document.getElementById('interaction-hint');
 const VIDEO_HINT_DISTANCE = 3.0;
 const INTERACT_KEY = 'KeyE';
@@ -64,13 +67,47 @@ youtubeOverlay.querySelector('.overlay-backdrop').addEventListener('click', () =
   youtubeClose.click();
 });
 
-function openYoutubeOverlay(videoId) {
-  youtubeIframe.src = `https://www.youtube.com/embed/${videoId}?rel=0&showinfo=0&autoplay=1&mute=0&playsinline=1`;
-  youtubeOverlay.classList.remove('hidden');
-  youtubeOverlay.classList.add('visible');
+const arcadeClose = document.getElementById('arcade-close');
+
+arcadeClose?.addEventListener('click', () => {
+  arcadeOverlay?.classList.add('hidden');
+  arcadeOverlay?.classList.remove('visible');
+  if (arcadeIframe) arcadeIframe.src = '';
+});
+
+arcadeOverlay?.querySelector('.overlay-backdrop')?.addEventListener('click', () => {
+  arcadeOverlay?.classList.add('hidden');
+  arcadeOverlay?.classList.remove('visible');
+  if (arcadeIframe) arcadeIframe.src = '';
+});
+
+function openIframeOverlay(overlay, iframe, src) {
+  if (!overlay || !iframe || !src) return;
+  iframe.src = src;
+  overlay.classList.remove('hidden');
+  overlay.classList.add('visible');
   if (document.pointerLockElement === canvas) {
     document.exitPointerLock();
   }
+}
+
+function openYoutubeOverlay(videoId) {
+  const youtubeUrl = `https://www.youtube.com/embed/${videoId}?rel=0&showinfo=0&autoplay=1&mute=0&playsinline=1`;
+  openIframeOverlay(youtubeOverlay, youtubeIframe, youtubeUrl);
+}
+
+function openArcadeOverlay(gameUrl) {
+  openIframeOverlay(arcadeOverlay, arcadeIframe, gameUrl);
+}
+
+function openArcadePopup(gameUrl) {
+  if (!gameUrl) return false;
+  openArcadeOverlay(gameUrl);
+  return true;
+}
+
+function openArcade(gameUrl) {
+  return openArcadePopup(gameUrl);
 }
 
 function getCanvasPointer(event) {
@@ -80,6 +117,26 @@ function getCanvasPointer(event) {
   const x = ((clientX - rect.left) / rect.width) * 2 - 1;
   const y = -((clientY - rect.top) / rect.height) * 2 + 1;
   return new THREE.Vector2(x, y);
+}
+
+function tryOpenArcadeFromPointer(event) {
+  if (arcadeOverlay?.classList.contains('visible')) return false;
+
+  const point = getCanvasPointer(event);
+  raycaster.setFromCamera(point, camera);
+  const intersects = raycaster.intersectObject(arcadeMachine, true);
+  if (intersects.length === 0) {
+    return false;
+  }
+
+  const hit = intersects[0].object;
+  const gameUrl = hit.userData.gameUrl || arcadeMachine.userData.gameUrl;
+  if (gameUrl) {
+    openArcade(gameUrl);
+    return true;
+  }
+
+  return false;
 }
 
 function tryOpenVideoFromPointer(event) {
@@ -114,6 +171,12 @@ function tryMovePlayerToPointer(event) {
   return true;
 }
 
+function isLookingAtArcade() {
+  raycaster.setFromCamera(centerPointer, camera);
+  const intersects = raycaster.intersectObject(arcadeMachine, true);
+  return intersects.length > 0;
+}
+
 function isLookingAtTubeTV() {
   raycaster.setFromCamera(centerPointer, camera);
   const intersects = raycaster.intersectObject(tubeTV, true);
@@ -126,6 +189,12 @@ function handleInteractionKey(event) {
 }
 
 function tryInteract() {
+  const distanceArcade = player.position.distanceTo(arcadeMachine.position);
+  if (distanceArcade <= VIDEO_HINT_DISTANCE && isLookingAtArcade()) {
+    openArcade(arcadeMachine.userData.gameUrl);
+    return;
+  }
+
   const distance = player.position.distanceTo(tubeTV.position);
   if (distance > VIDEO_HINT_DISTANCE) return;
   if (!isLookingAtTubeTV()) return;
@@ -280,6 +349,11 @@ function updateTVCalloutAnimation(time) {
 const planet = createPlanet(scene);
 const sign = createSign(scene, new THREE.Vector3(0, 0.9, -1.25));
 const tubeTV = createTubeTV(scene, 'hIxQU0IlDqw', new THREE.Vector3(1.8, 0.9, 0.3));
+const arcadeMachine = createArcadeMachine(
+  scene,
+  'https://www.retrogames.cc/embed/44252-smw-nes-fixed-physics.html',
+  new THREE.Vector3(-1.8, 0.9, 0.3)
+);
 const grass = createGrass(scene, 280);
 const treeObstacles = createTrees(scene, 70);
 const houseObstacles = createHouses(scene, 12);
@@ -288,10 +362,12 @@ const sceneObstacles = [
   ...houseObstacles,
   sign.userData.obstacle,
   tubeTV.userData.obstacle,
+  arcadeMachine.userData.obstacle,
 ];
 
 canvas.addEventListener('click', (event) => {
-  if (tryOpenVideoFromPointer(event)) return;
+  if (tryOpenArcadeFromPointer(event) || tryOpenVideoFromPointer(event)) return;
+  if (!controls?.isLocked) return;
   tryMovePlayerToPointer(event);
 });
 
@@ -394,7 +470,7 @@ canvas.addEventListener('touchend', (event) => {
     lastTouchPoint = null;
     return;
   }
-  if (tryOpenVideoFromPointer(event)) {
+  if (tryOpenArcadeFromPointer(event) || tryOpenVideoFromPointer(event)) {
     lastTouchPoint = null;
     return;
   }

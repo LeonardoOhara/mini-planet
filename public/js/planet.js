@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export const PLANET_RADIUS = 16;
+export const PLANET_RADIUS = 5;
 
 /**
  * Cria o mesh do planeta e o adiciona à cena.

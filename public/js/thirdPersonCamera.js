@@ -10,12 +10,14 @@ const DEFAULT_HEIGHT = 2.2;
 const MIN_DISTANCE = 3.5;
 const MAX_DISTANCE = 12.0;
 const CAMERA_SURFACE_MARGIN = 0.45;
+const CAMERA_FOLLOW_SPEED = 0.14;
 
 export class ThirdPersonCamera {
   constructor(camera) {
     this.camera = camera;
     this.distance = DEFAULT_DISTANCE;
     this.height = DEFAULT_HEIGHT;
+    this.followSpeed = CAMERA_FOLLOW_SPEED;
     this._desiredPos = new THREE.Vector3();
     this._lookTarget = new THREE.Vector3();
   }
@@ -47,7 +49,9 @@ export class ThirdPersonCamera {
     if (this._desiredPos.length() < minCameraRadius) {
       this._desiredPos.normalize().multiplyScalar(minCameraRadius);
     }
-    this.camera.position.lerp(this._desiredPos, 1); // segue diretamente (sem atraso) para o MVP
+
+    // Suaviza o movimento da câmera para evitar saltos bruscos.
+    this.camera.position.lerp(this._desiredPos, this.followSpeed);
 
     this._lookTarget.copy(player.position).addScaledVector(up, 1.3);
     this.camera.up.copy(up);

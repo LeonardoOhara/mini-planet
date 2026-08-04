@@ -86,6 +86,7 @@ export class Controls {
     document.addEventListener('mousemove', this._onMouseMove);
     document.addEventListener('pointerlockchange', this._onPointerLockChange);
     this._blocker.addEventListener('click', this._onClick);
+    this.domElement.addEventListener('click', this._onClick);
 
     if (this._isTouchDevice()) {
       this._touchControls?.classList.add('visible');
