@@ -39,6 +39,9 @@ export class Controls {
     this._touchLookLast = { x: 0, y: 0 };
     this._touchLastTap = 0;
     this._touchRunHold = false;
+    this._touchHoldToWalk = false;
+    this._touchHoldId = null;
+    this._bPressTime = 0;
     this._radialLeft = document.getElementById('radial-left');
     this._radialRight = document.getElementById('radial-right');
     this._radialActive = { left: false, right: false };
@@ -94,35 +97,19 @@ export class Controls {
       this.domElement.addEventListener('touchend', this._onTouchEnd);
       this.domElement.addEventListener('touchcancel', this._onTouchEnd);
       this._blocker.addEventListener('touchstart', this._onTouchBlockerStart, { passive: false });
-      Object.values(this._touchButtons).forEach((button) => {
-        button?.addEventListener('touchstart', this._onTouchButtonStart, { passive: false });
-        button?.addEventListener('touchend', this._onTouchButtonEnd);
-        button?.addEventListener('touchcancel', this._onTouchButtonEnd);
-      });
+      // Only hook the essential touch buttons for mobile: keep A/B (GB overlay)
+      // Remove axis controls (dpad, radial, analog sticks) so orientation is done by touch drag
+      // and walking is triggered by pressing `B`.
+      this._touchButtons.jump?.addEventListener('touchstart', this._onTouchButtonStart, { passive: false });
+      this._touchButtons.jump?.addEventListener('touchend', this._onTouchButtonEnd);
+      this._touchButtons.jump?.addEventListener('touchcancel', this._onTouchButtonEnd);
 
-      this._radialLeft?.addEventListener('touchstart', this._onRadialStart, { passive: false });
-      this._radialRight?.addEventListener('touchstart', this._onRadialStart, { passive: false });
-      this._radialLeft?.addEventListener('touchmove', this._onRadialMove, { passive: false });
-      this._radialRight?.addEventListener('touchmove', this._onRadialMove, { passive: false });
-      this._radialLeft?.addEventListener('touchend', this._onRadialEnd);
-      this._radialRight?.addEventListener('touchend', this._onRadialEnd);
-      this._radialLeft?.addEventListener('touchcancel', this._onRadialEnd);
-      this._radialRight?.addEventListener('touchcancel', this._onRadialEnd);
-      // Hook GameBoy buttons
+      // Hook GameBoy A/B buttons (GB overlay). Keep GB buttons but map B to forward.
       this._gbButtons.forEach((btn) => {
         btn.addEventListener('touchstart', this._onTouchButtonStart, { passive: false });
         btn.addEventListener('touchend', this._onTouchButtonEnd);
         btn.addEventListener('touchcancel', this._onTouchButtonEnd);
       });
-      // Hook GB analog sticks
-      this._gbLeftStick?.addEventListener('touchstart', this._onGBStickStart, { passive: false });
-      this._gbLeftStick?.addEventListener('touchmove', this._onGBStickMove, { passive: false });
-      this._gbLeftStick?.addEventListener('touchend', this._onGBStickEnd);
-      this._gbLeftStick?.addEventListener('touchcancel', this._onGBStickEnd);
-      this._gbRightStick?.addEventListener('touchstart', this._onGBStickStart, { passive: false });
-      this._gbRightStick?.addEventListener('touchmove', this._onGBStickMove, { passive: false });
-      this._gbRightStick?.addEventListener('touchend', this._onGBStickEnd);
-      this._gbRightStick?.addEventListener('touchcancel', this._onGBStickEnd);
     }
   }
 
@@ -138,15 +125,13 @@ export class Controls {
     if (event.target.closest('.touch-button')) return;
     event.preventDefault();
 
-    const now = performance.now();
-    if (now - this._touchLastTap < 350) {
-      this.keys.run = true;
-      this._touchRunHold = true;
-    }
-    this._touchLastTap = now;
-
+    // Start walking when user touches and holds the canvas
     const touch = event.touches[0];
     if (touch) {
+      this._touchHoldToWalk = true;
+      this._touchHoldId = touch.identifier ?? 0;
+      this.keys.forward = true;
+      // Also enable look-by-drag
       this._touchLookActive = true;
       this._touchLookLast = { x: touch.clientX, y: touch.clientY };
     }
@@ -167,12 +152,27 @@ export class Controls {
 
   _onTouchEnd(event) {
     if (event.target.closest('.touch-button')) return;
+    // If all touches ended, stop look and walking
     if (event.touches.length === 0) {
       this._touchLookActive = false;
-      this.keys.forward = false;
+      if (this._touchHoldToWalk) {
+        this.keys.forward = false;
+        this._touchHoldToWalk = false;
+        this._touchHoldId = null;
+      }
       if (this._touchRunHold) {
         this.keys.run = false;
         this._touchRunHold = false;
+      }
+    } else {
+      // If a specific changed touch ended and it was the hold touch, stop walking
+      const changed = Array.from(event.changedTouches || []);
+      for (const t of changed) {
+        if (this._touchHoldId !== null && t.identifier === this._touchHoldId) {
+          this.keys.forward = false;
+          this._touchHoldToWalk = false;
+          this._touchHoldId = null;
+        }
       }
     }
   }
@@ -337,7 +337,9 @@ export class Controls {
       case 'btn-down': case 'gb-down': this.keys.backward = true; break;
       case 'btn-left': case 'gb-left': this.keys.left = true; break;
       case 'btn-right': case 'gb-right': this.keys.right = true; break;
-      case 'btn-run': case 'gb-b': this.keys.run = true; break;
+      // On mobile: pressing GB B makes the player run; short taps request interaction
+      case 'gb-b': this.keys.run = true; this._bPressTime = performance.now(); break;
+      case 'btn-run': this.keys.run = true; break;
       case 'btn-jump': case 'gb-a': this.keys.jump = true; break;
     }
   }
@@ -350,7 +352,18 @@ export class Controls {
       case 'btn-down': case 'gb-down': this.keys.backward = false; break;
       case 'btn-left': case 'gb-left': this.keys.left = false; break;
       case 'btn-right': case 'gb-right': this.keys.right = false; break;
-      case 'btn-run': case 'gb-b': this.keys.run = false; break;
+      case 'gb-b': {
+        const now = performance.now();
+        const dur = now - (this._bPressTime || 0);
+        this.keys.run = false;
+        this._bPressTime = 0;
+        // Short tap -> request interaction
+        if (dur > 0 && dur < 300) {
+          document.dispatchEvent(new CustomEvent('game-interact-request'));
+        }
+        break;
+      }
+      case 'btn-run': this.keys.run = false; break;
       case 'btn-jump': case 'gb-a': this.keys.jump = false; break;
     }
   }
@@ -377,6 +390,7 @@ export class Controls {
       case 'KeyS': case 'ArrowDown': this.keys.backward = true; break;
       case 'KeyA': case 'ArrowLeft': this.keys.left = true; break;
       case 'KeyD': case 'ArrowRight': this.keys.right = true; break;
+      case 'KeyB': this.keys.run = true; this._bPressTime = performance.now(); break;
       case 'ShiftLeft': case 'ShiftRight': this.keys.run = true; break;
       case 'Space': this.keys.jump = true; event.preventDefault(); break;
     }
@@ -389,6 +403,16 @@ export class Controls {
       case 'KeyA': case 'ArrowLeft': this.keys.left = false; break;
       case 'KeyD': case 'ArrowRight': this.keys.right = false; break;
       case 'ShiftLeft': case 'ShiftRight': this.keys.run = false; break;
+      case 'KeyB': {
+        const now = performance.now();
+        const dur = now - (this._bPressTime || 0);
+        this.keys.run = false;
+        this._bPressTime = 0;
+        if (dur > 0 && dur < 300) {
+          document.dispatchEvent(new CustomEvent('game-interact-request'));
+        }
+        break;
+      }
       case 'Space': this.keys.jump = false; break;
     }
   }

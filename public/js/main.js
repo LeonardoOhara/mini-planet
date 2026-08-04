@@ -111,11 +111,18 @@ function isLookingAtTubeTV() {
 
 function handleInteractionKey(event) {
   if (event.code !== INTERACT_KEY) return;
+  tryInteract();
+}
+
+function tryInteract() {
   const distance = player.position.distanceTo(tubeTV.position);
   if (distance > VIDEO_HINT_DISTANCE) return;
   if (!isLookingAtTubeTV()) return;
   openYoutubeOverlay(tubeTV.userData.videoId);
 }
+
+// Listen for interaction requests from controls (e.g. short tap on B)
+document.addEventListener('game-interact-request', () => tryInteract());
 
 // --- Iluminação ---
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);

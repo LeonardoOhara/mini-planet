@@ -458,6 +458,25 @@ html, body {
   }
 }
 
+/* Mobile: hide axis controls (dpad, radial, gb sticks) to enforce touch-look + B-to-walk */
+@media (max-width: 900px) {
+  #touch-dpad {
+    display: none !important;
+  }
+  .radial-control {
+    display: none !important;
+    pointer-events: none !important;
+  }
+  .gb-stick {
+    display: none !important;
+    pointer-events: none !important;
+  }
+  /* keep GB action buttons (A/B) visible */
+  .gb-actions {
+    display: flex !important;
+  }
+}
+
 @media (orientation: landscape) and (max-width: 900px) {
   #touch-controls {
     bottom: 18px;
