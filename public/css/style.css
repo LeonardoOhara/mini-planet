@@ -10,12 +10,16 @@ html, body {
   overflow: hidden;
   background: #000;
   font-family: 'Segoe UI', Arial, sans-serif;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #game-canvas {
   display: block;
   width: 100%;
   height: 100%;
+  touch-action: none;
 }
 
 /* Mira central */
@@ -32,6 +36,10 @@ html, body {
   z-index: 5;
 }
 
+.hidden {
+  display: none !important;
+}
+
 /* HUD simples (FPS) */
 #hud {
   position: fixed;
@@ -40,8 +48,78 @@ html, body {
   color: #fff;
   font-size: 13px;
   text-shadow: 0 0 4px rgba(0,0,0,0.8);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 8px 12px;
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
   z-index: 5;
   pointer-events: none;
+}
+
+#touch-controls {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  right: 12px;
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 6;
+  pointer-events: none;
+}
+
+#touch-controls.visible {
+  pointer-events: all;
+}
+
+#touch-dpad {
+  display: grid;
+  grid-template-columns: 56px 56px 56px;
+  grid-template-rows: 56px 56px;
+  gap: 10px;
+}
+
+.touch-spacer {
+  width: 56px;
+  height: 56px;
+}
+
+.touch-button {
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 600;
+  box-shadow: 0 12px 18px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(14px);
+  touch-action: none;
+}
+
+.action-button {
+  width: 130px;
+}
+
+#touch-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+#touch-label {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.82rem;
+  text-align: center;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  width: fit-content;
 }
 
 /* Overlay exibido quando o Pointer Lock está desativado */
@@ -81,4 +159,23 @@ html, body {
   margin-top: 18px;
   font-size: 0.85rem;
   opacity: 0.7;
+}
+
+@media (max-width: 640px) {
+  #hud {
+    left: 8px;
+    top: 8px;
+    right: 8px;
+    font-size: 12px;
+  }
+
+  .touch-button {
+    width: 52px;
+    height: 52px;
+    font-size: 1rem;
+  }
+
+  .action-button {
+    width: 110px;
+  }
 }

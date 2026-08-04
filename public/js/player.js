@@ -17,7 +17,7 @@ const SPRITE_ANIMATIONS = {
 };
 
 export class Player {
-  constructor(scene) {
+  constructor(scene, obstacles = []) {
     this.group = new THREE.Group();
     scene.add(this.group);
 
@@ -28,6 +28,7 @@ export class Player {
     this.isGrounded = true;
     this.walkCycle = 0;
     this.up = new THREE.Vector3(0, 1, 0);
+    this.obstacles = obstacles;
 
     this.currentAction = 'idle';
     this.currentFrame = 0;
@@ -126,11 +127,15 @@ export class Player {
     if (controls.keys.left) input.sub(right);
 
     const isMoving = input.lengthSq() > 0;
+    const desiredPosition = this.position.clone();
     if (isMoving) {
       input.normalize();
       const speed = controls.keys.run ? RUN_SPEED : WALK_SPEED;
-      this.position.addScaledVector(input, speed * delta);
+      desiredPosition.addScaledVector(input, speed * delta);
     }
+
+    const correctedPosition = this._resolveCollision(desiredPosition);
+    this.position.copy(correctedPosition);
 
     if (controls.keys.jump && this.isGrounded) {
       this.verticalVelocity = JUMP_SPEED;
@@ -161,5 +166,34 @@ export class Player {
       this.sprite.material.map = frames[this.currentFrame];
       this.sprite.material.needsUpdate = true;
     }
+  }
+
+  _collidesWithObstacle(position) {
+    const playerRadius = 0.75;
+    for (const obstacle of this.obstacles) {
+      const distance = position.distanceTo(obstacle.position);
+      if (distance < obstacle.radius + playerRadius) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  _resolveCollision(position) {
+    const playerRadius = 0.75;
+    let finalPosition = position.clone();
+
+    for (const obstacle of this.obstacles) {
+      const direction = finalPosition.clone().sub(obstacle.position);
+      const distance = direction.length();
+      const minDistance = obstacle.radius + playerRadius;
+      if (distance < minDistance && distance > 0.0001) {
+        const pushDistance = minDistance - distance;
+        direction.normalize();
+        finalPosition.add(direction.multiplyScalar(pushDistance));
+      }
+    }
+
+    return finalPosition;
   }
 }

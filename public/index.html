@@ -26,12 +26,28 @@
     <span id="fps">-- fps</span>
   </div>
 
+  <div id="touch-controls" class="hidden">
+    <div id="touch-dpad">
+      <span class="touch-spacer"></span>
+      <button type="button" id="btn-up" class="touch-button">↑</button>
+      <span class="touch-spacer"></span>
+      <button type="button" id="btn-left" class="touch-button">←</button>
+      <button type="button" id="btn-down" class="touch-button">↓</button>
+      <button type="button" id="btn-right" class="touch-button">→</button>
+    </div>
+    <div id="touch-actions">
+      <button type="button" id="btn-jump" class="touch-button action-button">Pular</button>
+      <button type="button" id="btn-run" class="touch-button action-button">Correr</button>
+    </div>
+    <div id="touch-label">Arraste para olhar. Toque duplo e segure para correr.</div>
+  </div>
+
   <div id="blocker">
     <div id="instructions">
       <h1>Mini Planet</h1>
-      <p>Clique para jogar</p>
+      <p>Toque para jogar ou clique para entrar.</p>
       <p class="controls">
-        WASD — mover &nbsp;|&nbsp; SHIFT — correr &nbsp;|&nbsp; ESPAÇO — pular &nbsp;|&nbsp; MOUSE — olhar ao redor
+        WASD — mover &nbsp;|&nbsp; SHIFT — correr &nbsp;|&nbsp; ESPAÇO — pular &nbsp;|&nbsp; MOUSE/TOQUE — olhar ao redor
       </p>
     </div>
   </div>

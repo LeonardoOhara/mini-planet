@@ -35,6 +35,7 @@ function createSingleTree() {
  */
 export function createTrees(scene, count = 60) {
   const trees = new THREE.Group();
+  const obstacles = [];
 
   for (let i = 0; i < count; i++) {
     // Distribuição uniforme de pontos numa esfera
@@ -55,8 +56,12 @@ export function createTrees(scene, count = 60) {
     tree.rotateY(Math.random() * Math.PI * 2);
 
     trees.add(tree);
+    obstacles.push({
+      position: pos.clone(),
+      radius: 0.9 + Math.random() * 0.2,
+    });
   }
 
   scene.add(trees);
-  return trees;
+  return obstacles;
 }
