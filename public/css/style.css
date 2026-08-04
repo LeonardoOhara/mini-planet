@@ -61,7 +61,7 @@ html, body {
 
 #interaction-hint {
   position: fixed;
-  bottom: 22px;
+  bottom: calc(22px + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   color: #fff;
@@ -75,6 +75,8 @@ html, body {
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.18s ease;
+  max-width: min(92vw, 420px);
+  text-align: center;
 }
 
 #interaction-hint.visible {
@@ -84,7 +86,7 @@ html, body {
 #touch-controls {
   position: fixed;
   left: 12px;
-  bottom: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
   right: 12px;
   max-width: 420px;
   margin: 0 auto;
@@ -98,6 +100,36 @@ html, body {
 
 #touch-controls.visible {
   pointer-events: all;
+}
+
+.radial-control {
+  position: fixed;
+  top: 50%;
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 55%, rgba(255,255,255,0.02) 100%);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 12px 24px rgba(0,0,0,0.2);
+  z-index: 6;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.radial-control.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+#radial-left {
+  left: 18px;
+}
+
+#radial-right {
+  right: 18px;
 }
 
 #touch-dpad {
@@ -124,6 +156,12 @@ html, body {
   box-shadow: 0 12px 18px rgba(0, 0, 0, 0.18);
   backdrop-filter: blur(14px);
   touch-action: none;
+  min-height: 48px;
+}
+
+.touch-button:active {
+  transform: scale(0.97);
+  background: rgba(255, 255, 255, 0.24);
 }
 
 .action-button {
@@ -186,13 +224,14 @@ html, body {
 
 #youtube-overlay .overlay-content {
   position: relative;
-  width: min(90vw, 980px);
+  width: min(92vw, 980px);
   aspect-ratio: 16 / 9;
   background: #000;
   border-radius: 22px;
   overflow: hidden;
   box-shadow: 0 0 120px rgba(0, 0, 0, 0.6);
   z-index: 1;
+  max-height: min(92vh, 720px);
 }
 
 #youtube-overlay iframe {
@@ -256,5 +295,26 @@ html, body {
 
   .action-button {
     width: 110px;
+  }
+
+  .radial-control {
+    width: 88px;
+    height: 88px;
+  }
+}
+
+@media (orientation: landscape) and (max-width: 900px) {
+  #touch-controls {
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 360px;
+    opacity: 0.9;
+  }
+
+  #radial-left,
+  #radial-right {
+    opacity: 1;
+    pointer-events: all;
   }
 }

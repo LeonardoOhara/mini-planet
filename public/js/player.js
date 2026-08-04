@@ -34,6 +34,7 @@ export class Player {
     this.currentFrame = 0;
     this.frameTimer = 0;
     this.animations = {};
+    this.moveTarget = null;
 
     this.sprite = this._createSprite();
     this.group.add(this.sprite);
@@ -108,6 +109,10 @@ export class Player {
     }
   }
 
+  setMoveTarget(position) {
+    this.moveTarget = position.clone();
+  }
+
   update(delta, controls) {
     const up = this.up.copy(this.position).normalize();
     this.forward.sub(up.clone().multiplyScalar(this.forward.dot(up))).normalize();
@@ -121,12 +126,33 @@ export class Player {
     const right = new THREE.Vector3().crossVectors(this.forward, up).normalize();
 
     const input = new THREE.Vector3();
-    if (controls.keys.forward) input.add(this.forward);
-    if (controls.keys.backward) input.sub(this.forward);
-    if (controls.keys.right) input.add(right);
-    if (controls.keys.left) input.sub(right);
+    let isMoving = false;
 
-    const isMoving = input.lengthSq() > 0;
+    if (this.moveTarget) {
+      const toTarget = this.moveTarget.clone().sub(this.position);
+      const tangentDirection = toTarget.clone().sub(up.clone().multiplyScalar(toTarget.dot(up)));
+      const tangentDistance = tangentDirection.length();
+
+      if (tangentDistance > 0.001) {
+        const moveDirection = tangentDirection.normalize();
+        input.add(moveDirection);
+        this.forward.lerp(moveDirection, 0.22);
+        isMoving = true;
+
+        if (tangentDistance <= 0.7) {
+          this.moveTarget = null;
+        }
+      } else {
+        this.moveTarget = null;
+      }
+    } else {
+      if (controls.keys.forward) input.add(this.forward);
+      if (controls.keys.backward) input.sub(this.forward);
+      if (controls.keys.right) input.add(right);
+      if (controls.keys.left) input.sub(right);
+      isMoving = input.lengthSq() > 0;
+    }
+
     const desiredPosition = this.position.clone();
     if (isMoving) {
       input.normalize();

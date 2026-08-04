@@ -39,6 +39,9 @@ const youtubeClose = document.getElementById('youtube-close');
 const interactionHint = document.getElementById('interaction-hint');
 const VIDEO_HINT_DISTANCE = 3.0;
 const INTERACT_KEY = 'KeyE';
+const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+let lastTouchPoint = null;
+let pinchDistance = null;
 
 youtubeClose.addEventListener('click', () => {
   youtubeOverlay.classList.add('hidden');
@@ -51,12 +54,53 @@ youtubeOverlay.querySelector('.overlay-backdrop').addEventListener('click', () =
 });
 
 function openYoutubeOverlay(videoId) {
-  youtubeIframe.src = `https://www.youtube.com/embed/${videoId}?rel=0&showinfo=0&autoplay=1&mute=0`;
+  youtubeIframe.src = `https://www.youtube.com/embed/${videoId}?rel=0&showinfo=0&autoplay=1&mute=0&playsinline=1`;
   youtubeOverlay.classList.remove('hidden');
   youtubeOverlay.classList.add('visible');
   if (document.pointerLockElement === canvas) {
     document.exitPointerLock();
   }
+}
+
+function getCanvasPointer(event) {
+  const rect = canvas.getBoundingClientRect();
+  const clientX = event.clientX ?? event.touches?.[0]?.clientX ?? event.changedTouches?.[0]?.clientX ?? 0;
+  const clientY = event.clientY ?? event.touches?.[0]?.clientY ?? event.changedTouches?.[0]?.clientY ?? 0;
+  const x = ((clientX - rect.left) / rect.width) * 2 - 1;
+  const y = -((clientY - rect.top) / rect.height) * 2 + 1;
+  return new THREE.Vector2(x, y);
+}
+
+function tryOpenVideoFromPointer(event) {
+  if (youtubeOverlay.classList.contains('visible')) return false;
+
+  const point = getCanvasPointer(event);
+  raycaster.setFromCamera(point, camera);
+  const intersects = raycaster.intersectObject(tubeTV, true);
+  if (intersects.length === 0) {
+    return false;
+  }
+
+  const hit = intersects[0].object;
+  const videoId = hit.userData.videoId || tubeTV.userData.videoId;
+  if (videoId) {
+    openYoutubeOverlay(videoId);
+    return true;
+  }
+
+  return false;
+}
+
+function tryMovePlayerToPointer(event) {
+  const point = getCanvasPointer(event);
+  raycaster.setFromCamera(point, camera);
+  const intersects = raycaster.intersectObject(planet, true);
+  if (intersects.length === 0) {
+    return false;
+  }
+
+  player.setMoveTarget(intersects[0].point);
+  return true;
 }
 
 function isLookingAtTubeTV() {
@@ -229,18 +273,61 @@ const sceneObstacles = [
 ];
 
 canvas.addEventListener('click', (event) => {
-  pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
-  raycaster.setFromCamera(pointer, camera);
-  const intersects = raycaster.intersectObject(tubeTV, true);
-  if (intersects.length > 0) {
-    const hit = intersects[0].object;
-    const videoId = hit.userData.videoId || tubeTV.userData.videoId;
-    if (videoId) {
-      openYoutubeOverlay(videoId);
-    }
-  }
+  if (tryOpenVideoFromPointer(event)) return;
+  tryMovePlayerToPointer(event);
 });
+
+canvas.addEventListener('touchstart', (event) => {
+  if (event.touches.length === 2) {
+    pinchDistance = Math.hypot(
+      event.touches[0].clientX - event.touches[1].clientX,
+      event.touches[0].clientY - event.touches[1].clientY
+    );
+    lastTouchPoint = null;
+    return;
+  }
+
+  if (event.touches.length === 1) {
+    const touch = event.touches[0];
+    lastTouchPoint = { x: touch.clientX, y: touch.clientY };
+  }
+}, { passive: true });
+
+canvas.addEventListener('touchmove', (event) => {
+  if (event.touches.length === 2 && pinchDistance) {
+    event.preventDefault();
+    const nextDistance = Math.hypot(
+      event.touches[0].clientX - event.touches[1].clientX,
+      event.touches[0].clientY - event.touches[1].clientY
+    );
+    const delta = nextDistance - pinchDistance;
+    thirdPersonCamera.adjustZoom(-delta * 0.01);
+    pinchDistance = nextDistance;
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (event) => {
+  if (event.touches.length >= 2) {
+    pinchDistance = null;
+    return;
+  }
+
+  if (!lastTouchPoint) return;
+  const touch = event.changedTouches?.[0];
+  if (!touch) return;
+  const dx = touch.clientX - lastTouchPoint.x;
+  const dy = touch.clientY - lastTouchPoint.y;
+  if (Math.hypot(dx, dy) > 12) {
+    lastTouchPoint = null;
+    return;
+  }
+  if (tryOpenVideoFromPointer(event)) {
+    lastTouchPoint = null;
+    return;
+  }
+  tryMovePlayerToPointer(event);
+  lastTouchPoint = null;
+}, { passive: false });
 
 // --- Jogador, controles e câmera ---
 const player = new Player(scene, sceneObstacles);
@@ -290,9 +377,15 @@ function updateInteractionHint(playerPos, billboardPos) {
   const distance = playerPos.distanceTo(billboardPos);
   const visible = distance <= VIDEO_HINT_DISTANCE;
   if (visible) {
-    interactionHint.textContent = isLookingAtTubeTV()
-      ? 'Pressione E ou clique para assistir'
-      : 'Aponte para a TV e pressione E';
+    if (isTouchDevice) {
+      interactionHint.textContent = isLookingAtTubeTV()
+        ? 'Toque na TV para assistir'
+        : 'Aponte para a TV e toque para assistir';
+    } else {
+      interactionHint.textContent = isLookingAtTubeTV()
+        ? 'Pressione E ou clique para assistir'
+        : 'Aponte para a TV e pressione E';
+    }
   } else {
     interactionHint.textContent = 'Aproxime-se da TV para assistir';
   }

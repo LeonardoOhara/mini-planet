@@ -39,6 +39,10 @@ export class Controls {
     this._touchLookLast = { x: 0, y: 0 };
     this._touchLastTap = 0;
     this._touchRunHold = false;
+    this._radialLeft = document.getElementById('radial-left');
+    this._radialRight = document.getElementById('radial-right');
+    this._radialActive = { left: false, right: false };
+    this._radialPointerId = null;
 
     this._onKeyDown = this._onKeyDown.bind(this);
     this._onKeyUp = this._onKeyUp.bind(this);
@@ -51,6 +55,9 @@ export class Controls {
     this._onTouchButtonStart = this._onTouchButtonStart.bind(this);
     this._onTouchButtonEnd = this._onTouchButtonEnd.bind(this);
     this._onTouchBlockerStart = this._onTouchBlockerStart.bind(this);
+    this._onRadialStart = this._onRadialStart.bind(this);
+    this._onRadialMove = this._onRadialMove.bind(this);
+    this._onRadialEnd = this._onRadialEnd.bind(this);
 
     this._init();
   }
@@ -64,6 +71,8 @@ export class Controls {
 
     if (this._isTouchDevice()) {
       this._touchControls?.classList.add('visible');
+      this._setRadialVisibility();
+      window.addEventListener('resize', () => this._setRadialVisibility());
       this.domElement.addEventListener('touchstart', this._onTouchStart, { passive: false });
       this.domElement.addEventListener('touchmove', this._onTouchMove, { passive: false });
       this.domElement.addEventListener('touchend', this._onTouchEnd);
@@ -74,6 +83,15 @@ export class Controls {
         button?.addEventListener('touchend', this._onTouchButtonEnd);
         button?.addEventListener('touchcancel', this._onTouchButtonEnd);
       });
+
+      this._radialLeft?.addEventListener('touchstart', this._onRadialStart, { passive: false });
+      this._radialRight?.addEventListener('touchstart', this._onRadialStart, { passive: false });
+      this._radialLeft?.addEventListener('touchmove', this._onRadialMove, { passive: false });
+      this._radialRight?.addEventListener('touchmove', this._onRadialMove, { passive: false });
+      this._radialLeft?.addEventListener('touchend', this._onRadialEnd);
+      this._radialRight?.addEventListener('touchend', this._onRadialEnd);
+      this._radialLeft?.addEventListener('touchcancel', this._onRadialEnd);
+      this._radialRight?.addEventListener('touchcancel', this._onRadialEnd);
     }
   }
 
@@ -97,9 +115,10 @@ export class Controls {
     this._touchLastTap = now;
 
     const touch = event.touches[0];
-    this._touchLookActive = true;
-    this._touchLookLast = { x: touch.clientX, y: touch.clientY };
-    this.keys.forward = true;
+    if (touch) {
+      this._touchLookActive = true;
+      this._touchLookLast = { x: touch.clientX, y: touch.clientY };
+    }
   }
 
   _onTouchMove(event) {
@@ -131,7 +150,48 @@ export class Controls {
     event.preventDefault();
     this._blocker.classList.add('hidden');
     this.isLocked = true;
-    this.keys.forward = true;
+  }
+
+  _setRadialVisibility() {
+    const isLandscape = window.innerHeight < window.innerWidth;
+    const shouldShow = isLandscape && this._isTouchDevice();
+    this._radialLeft?.classList.toggle('visible', shouldShow);
+    this._radialRight?.classList.toggle('visible', shouldShow);
+  }
+
+  _onRadialStart(event) {
+    const target = event.currentTarget;
+    const isLeft = target === this._radialLeft;
+    this._radialActive.left = isLeft;
+    this._radialActive.right = !isLeft;
+    this._radialPointerId = event.pointerId ?? event.touches?.[0]?.identifier ?? null;
+    this._setRadialVisibility();
+    this._radialLeft?.classList.add('visible');
+    this._radialRight?.classList.add('visible');
+    event.preventDefault();
+  }
+
+  _onRadialMove(event) {
+    const target = event.currentTarget;
+    if (!target) return;
+    const touch = event.touches?.[0] || event.changedTouches?.[0];
+    if (!touch) return;
+    const isLeft = target === this._radialLeft;
+    if (isLeft) {
+      this.keys.left = touch.clientX < window.innerWidth / 2;
+      this.keys.right = false;
+    } else {
+      this.keys.right = touch.clientX > window.innerWidth / 2;
+      this.keys.left = false;
+    }
+    event.preventDefault();
+  }
+
+  _onRadialEnd(event) {
+    this.keys.left = false;
+    this.keys.right = false;
+    this._setRadialVisibility();
+    event.preventDefault();
   }
 
   _onTouchButtonStart(event) {
