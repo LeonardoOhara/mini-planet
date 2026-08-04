@@ -3,7 +3,7 @@
 // (planeta, jogador, controles, câmera, árvores) e roda o loop principal.
 
 import * as THREE from 'three';
-import { createPlanet, PLANET_RADIUS } from './planet.js';
+import { createPlanet, createSign, PLANET_RADIUS } from './planet.js';
 import { createTrees } from './trees.js';
 import { createHouses } from './houses.js';
 import { createGrass } from './grass.js';
@@ -63,6 +63,7 @@ scene.add(sunGlow);
 // --- Mundo ---
 createSky(scene);
 const planet = createPlanet(scene);
+createSign(scene, new THREE.Vector3(0, 0.9, -1.25));
 const grass = createGrass(scene, 280);
 const treeObstacles = createTrees(scene, 70);
 const houseObstacles = createHouses(scene, 12);
