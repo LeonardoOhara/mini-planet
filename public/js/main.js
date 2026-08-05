@@ -3,10 +3,10 @@
 // (planeta, jogador, controles, câmera, árvores) e roda o loop principal.
 
 import * as THREE from 'three';
-import { createPlanet, createSign, createTubeTV } from './planet.js';
+import { createPlanet, createSign, createTubeTV, PLANET_RADIUS } from './planet.js';
 import { createArcadeMachine } from './arcade.js';
 import { createTrees } from './trees.js';
-import { createHouses } from './houses.js';
+import { createHouses, createInteriorHouseScene } from './houses.js';
 import { createGrass } from './grass.js';
 import { createSky } from './sky.js';
 import { Player } from './player.js';
@@ -205,6 +205,13 @@ function handleInteractionKey(event) {
 }
 
 function tryInteract() {
+  if (player.mode === 'interior') {
+    if (isLookingAtHouseExit()) {
+      exitHouse();
+    }
+    return;
+  }
+
   const distanceArcade = player.position.distanceTo(arcadeMachine.position);
   if (distanceArcade <= VIDEO_HINT_DISTANCE && isLookingAtArcade()) {
     openArcade(arcadeMachine.userData.gameUrl);
@@ -212,9 +219,75 @@ function tryInteract() {
   }
 
   const distance = player.position.distanceTo(tubeTV.position);
-  if (distance > VIDEO_HINT_DISTANCE) return;
-  if (!isLookingAtTubeTV()) return;
-  openYoutubeOverlay(tubeTV.userData.videoId);
+  if (distance <= VIDEO_HINT_DISTANCE && isLookingAtTubeTV()) {
+    openYoutubeOverlay(tubeTV.userData.videoId);
+    return;
+  }
+
+  if (isLookingAtHouseDoor()) {
+    enterHouse();
+  }
+}
+
+function tryInteractFromPointer(event) {
+  const point = getCanvasPointer(event);
+  raycaster.setFromCamera(point, camera);
+
+  if (player.mode === 'interior') {
+    const intersects = raycaster.intersectObject(houseInterior.exitDoor, true);
+    if (intersects.length > 0) {
+      exitHouse();
+      return true;
+    }
+    return false;
+  }
+
+  const intersects = raycaster.intersectObjects(houseDoors, true);
+  if (intersects.length > 0) {
+    enterHouse();
+    return true;
+  }
+
+  return false;
+}
+
+function isLookingAtHouseDoor() {
+  raycaster.setFromCamera(centerPointer, camera);
+  const intersects = raycaster.intersectObjects(houseDoors, true);
+  return intersects.length > 0;
+}
+
+function isLookingAtHouseExit() {
+  raycaster.setFromCamera(centerPointer, camera);
+  const intersects = raycaster.intersectObject(houseInterior.exitDoor, true);
+  return intersects.length > 0;
+}
+
+function enterHouse() {
+  if (player.mode === 'interior') return;
+  player.enterInterior(houseInterior.spawnPosition.clone(), houseInterior.bounds);
+  thirdPersonCamera.setFirstPerson(true);
+  houseInterior.group.visible = true;
+  interactionHint.textContent = 'Pressione E ou clique para sair';
+  interactionHint.classList.add('visible');
+}
+
+function exitHouse() {
+  if (player.mode !== 'interior') return;
+  const exitPosition = new THREE.Vector3();
+  const exteriorDoor = houseDoors[0];
+  if (exteriorDoor) {
+    exteriorDoor.getWorldPosition(exitPosition);
+    exitPosition.normalize().multiplyScalar(PLANET_RADIUS + 0.55);
+    exitPosition.y = PLANET_RADIUS + 0.55;
+    player.exitInterior(exitPosition);
+  } else {
+    player.exitInterior();
+  }
+  thirdPersonCamera.setFirstPerson(false);
+  houseInterior.group.visible = false;
+  interactionHint.textContent = 'Aproxime-se da TV para assistir';
+  interactionHint.classList.remove('visible');
 }
 
 // Listen for interaction requests from controls (e.g. short tap on B)
@@ -372,7 +445,12 @@ const arcadeMachine = createArcadeMachine(
 );
 const grass = createGrass(scene, 280);
 const treeObstacles = createTrees(scene, 9);
-const houseObstacles = createHouses(scene, 12);
+const houseData = createHouses(scene, 12);
+const houseObstacles = houseData.obstacles;
+const houseDoors = houseData.doors;
+const houseInterior = createInteriorHouseScene();
+houseInterior.group.visible = false;
+scene.add(houseInterior.group);
 const sceneObstacles = [
   ...treeObstacles,
   ...houseObstacles,
@@ -383,6 +461,7 @@ const sceneObstacles = [
 
 canvas.addEventListener('click', (event) => {
   if (tryOpenArcadeFromPointer(event) || tryOpenVideoFromPointer(event)) return;
+  if (tryInteractFromPointer(event)) return;
   if (!controls?.isLocked) return;
   tryMovePlayerToPointer(event);
 });
@@ -788,6 +867,15 @@ function animate() {
   updateInteractionHint(player.position, tubeTV.position);
   updateTVCalloutAnimation(clock.elapsedTime);
 
+  houseData.group?.children.forEach((house, index) => {
+    const entranceTextMesh = house.userData?.entranceTextMesh;
+    if (!entranceTextMesh) return;
+
+    const baseY = house.userData?.entranceTextBaseY ?? entranceTextMesh.position.y;
+    const offset = house.userData?.entranceTextOffset ?? 0.06;
+    entranceTextMesh.position.y = baseY + Math.sin(clock.elapsedTime * 2 + index * 0.7) * offset;
+  });
+
   renderer.render(scene, camera);
 
   // Atualiza contador de FPS a cada ~0.5s
@@ -801,6 +889,17 @@ function animate() {
 }
 
 function updateInteractionHint(playerPos, billboardPos) {
+  if (player.mode === 'interior') {
+    const visible = isLookingAtHouseExit();
+    if (visible) {
+      interactionHint.textContent = 'Pressione E ou clique para sair';
+      interactionHint.classList.add('visible');
+    } else {
+      interactionHint.classList.remove('visible');
+    }
+    return;
+  }
+
   const distance = playerPos.distanceTo(billboardPos);
   const visible = distance <= VIDEO_HINT_DISTANCE;
   if (visible) {
@@ -814,9 +913,11 @@ function updateInteractionHint(playerPos, billboardPos) {
         : 'Aponte para a TV e pressione E';
     }
   } else {
-    interactionHint.textContent = 'Aproxime-se da TV para assistir';
+    interactionHint.textContent = isLookingAtHouseDoor()
+      ? 'Pressione E ou clique para entrar'
+      : 'Aproxime-se da TV para assistir';
   }
-  interactionHint.classList.toggle('visible', visible);
+  interactionHint.classList.toggle('visible', visible || isLookingAtHouseDoor());
 }
 
 animate();

@@ -20,6 +20,11 @@ export class ThirdPersonCamera {
     this.followSpeed = CAMERA_FOLLOW_SPEED;
     this._desiredPos = new THREE.Vector3();
     this._lookTarget = new THREE.Vector3();
+    this.firstPerson = false;
+  }
+
+  setFirstPerson(enabled) {
+    this.firstPerson = enabled;
   }
 
   adjustZoom(deltaY) {
@@ -33,14 +38,38 @@ export class ThirdPersonCamera {
   }
 
   update(player, controls) {
+    if (player.mode === 'interior') {
+      const up = new THREE.Vector3(0, 1, 0);
+      const forward = player.forward.clone();
+      const right = new THREE.Vector3().crossVectors(forward, up).normalize();
+
+      if (this.firstPerson) {
+        const pitchQuat = new THREE.Quaternion().setFromAxisAngle(right, controls.pitch);
+        const lookDirection = forward.clone().applyQuaternion(pitchQuat);
+        this._desiredPos.copy(player.position).addScaledVector(up, 1.55).addScaledVector(lookDirection, 0.08);
+        this._lookTarget.copy(player.position).addScaledVector(up, 1.55).addScaledVector(lookDirection, 6);
+        this.camera.position.lerp(this._desiredPos, this.followSpeed * 1.25);
+        this.camera.up.copy(up);
+        this.camera.lookAt(this._lookTarget);
+        return;
+      }
+
+      const offset = forward.clone().multiplyScalar(-5.2).addScaledVector(up, 3.4).addScaledVector(right, 0.8);
+      this._desiredPos.copy(player.position).add(offset);
+      this._desiredPos.y = Math.max(this._desiredPos.y, 1.2);
+      this.camera.position.lerp(this._desiredPos, this.followSpeed);
+
+      this._lookTarget.copy(player.position).addScaledVector(up, 1.25);
+      this.camera.up.copy(up);
+      this.camera.lookAt(this._lookTarget);
+      return;
+    }
+
     const up = new THREE.Vector3().copy(player.position).normalize();
     const forward = player.forward.clone();
     const right = new THREE.Vector3().crossVectors(forward, up).normalize();
 
-    // Offset base: atrás e acima do jogador
     let offset = forward.clone().multiplyScalar(-this.distance).addScaledVector(up, this.height);
-
-    // Aplica o pitch (olhar para cima/baixo) rotacionando o offset em torno do eixo "right"
     const pitchQuat = new THREE.Quaternion().setFromAxisAngle(right, controls.pitch);
     offset.applyQuaternion(pitchQuat);
 
@@ -50,7 +79,6 @@ export class ThirdPersonCamera {
       this._desiredPos.normalize().multiplyScalar(minCameraRadius);
     }
 
-    // Suaviza o movimento da câmera para evitar saltos bruscos.
     this.camera.position.lerp(this._desiredPos, this.followSpeed);
 
     this._lookTarget.copy(player.position).addScaledVector(up, 1.3);

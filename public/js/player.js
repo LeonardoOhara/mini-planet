@@ -37,6 +37,9 @@ export class Player {
     this.walkCycle = 0;
     this.up = new THREE.Vector3(0, 1, 0);
     this.obstacles = obstacles;
+    this.mode = 'exterior';
+    this.interiorBounds = null;
+    this.interiorHeight = 1.15;
 
     this.currentAction = 'idle';
     this.currentFrame = 0;
@@ -131,7 +134,81 @@ export class Player {
     this.moveTarget = position.clone();
   }
 
+  enterInterior(spawnPosition, bounds = null) {
+    this.mode = 'interior';
+    this.position.copy(spawnPosition);
+    this.position.y = this.interiorHeight;
+    this.forward.set(0, 0, -1);
+    this.up.set(0, 1, 0);
+    this.interiorBounds = bounds;
+    this.moveTarget = null;
+    this.group.position.copy(this.position);
+    this.sprite.visible = false;
+  }
+
+  exitInterior(restorePosition = null) {
+    this.mode = 'exterior';
+    this.up.set(0, 1, 0);
+    this.forward.set(0, 0, -1);
+    this.interiorBounds = null;
+    this.groundOffset = 0;
+    this.verticalVelocity = 0;
+    this.isGrounded = true;
+    if (restorePosition) {
+      this.position.copy(restorePosition);
+      this.group.position.copy(this.position);
+    }
+    this.sprite.visible = true;
+  }
+
   update(delta, controls) {
+    if (this.mode === 'interior') {
+      const up = this.up.clone().set(0, 1, 0);
+      if (controls.yaw !== 0) {
+        const yawQuat = new THREE.Quaternion().setFromAxisAngle(up, controls.yaw);
+        this.forward.applyQuaternion(yawQuat);
+        controls.yaw = 0;
+      }
+
+      const right = new THREE.Vector3().crossVectors(this.forward, up).normalize();
+      const input = new THREE.Vector3();
+      if (controls.keys.forward) input.add(this.forward);
+      if (controls.keys.backward) input.sub(this.forward);
+      if (controls.keys.right) input.add(right);
+      if (controls.keys.left) input.sub(right);
+      const isMoving = input.lengthSq() > 0;
+
+      const desiredPosition = this.position.clone();
+      if (isMoving) {
+        input.normalize();
+        const speed = controls.keys.run ? RUN_SPEED : WALK_SPEED;
+        desiredPosition.addScaledVector(input, speed * delta);
+      }
+
+      desiredPosition.y = this.interiorHeight;
+      if (this.interiorBounds) {
+        desiredPosition.x = THREE.MathUtils.clamp(desiredPosition.x, this.interiorBounds.minX, this.interiorBounds.maxX);
+        desiredPosition.z = THREE.MathUtils.clamp(desiredPosition.z, this.interiorBounds.minZ, this.interiorBounds.maxZ);
+      }
+
+      this.position.copy(desiredPosition);
+      this.group.position.copy(this.position);
+
+      const action = isMoving ? this._getMovementAction(input, right, controls.keys.run) : 'idle';
+      this._setAction(action);
+
+      this.frameTimer += delta;
+      const frames = this.animations[this.currentAction];
+      const frameDuration = this.currentAction === 'idle' ? IDLE_FRAME_DURATION : SPRITE_FRAME_DURATION;
+      if (frames && frames.length > 1 && this.frameTimer >= frameDuration) {
+        this.frameTimer = 0;
+        this.currentFrame = (this.currentFrame + 1) % frames.length;
+        this.sprite.material.map = frames[this.currentFrame];
+        this.sprite.material.needsUpdate = true;
+      }
+      return;
+    }
+
     const up = this.up.copy(this.position).normalize();
     this.forward.sub(up.clone().multiplyScalar(this.forward.dot(up))).normalize();
 
