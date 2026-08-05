@@ -42,6 +42,7 @@ const arcadeIframe = document.getElementById('arcade-iframe');
 const interactionHint = document.getElementById('interaction-hint');
 const VIDEO_HINT_DISTANCE = 3.0;
 const INTERACT_KEY = 'KeyE';
+const MUSIC_TOGGLE_KEY = 'KeyP';
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
 let lastTouchPoint = null;
 let pinchDistance = null;
@@ -184,6 +185,21 @@ function isLookingAtTubeTV() {
 }
 
 function handleInteractionKey(event) {
+  if (event.code === MUSIC_TOGGLE_KEY) {
+    event.preventDefault();
+    void musicManager.toggle();
+    return;
+  }
+  if (event.key === '+' || event.key === '=') {
+    event.preventDefault();
+    musicManager.changeVolume(0.1);
+    return;
+  }
+  if (event.key === '-') {
+    event.preventDefault();
+    musicManager.changeVolume(-0.1);
+    return;
+  }
   if (event.code !== INTERACT_KEY) return;
   tryInteract();
 }
@@ -594,8 +610,168 @@ document.addEventListener('keydown', handleInteractionKey);
 
 // --- HUD simples de FPS ---
 const fpsEl = document.getElementById('fps');
+const musicToggle = document.getElementById('music-toggle');
+const volumeUp = document.getElementById('volume-up');
+const volumeDown = document.getElementById('volume-down');
 let frameCount = 0;
 let fpsTimer = 0;
+
+const musicManager = {
+  audioCtx: null,
+  audioElement: null,
+  masterGain: null,
+  regulators: [],
+  isPlaying: false,
+  usingAudioElement: false,
+  volume: 0.5,
+  musicUrl: '/assets/music/background.mp3',
+  init() {
+    this.audioElement = new Audio(this.musicUrl);
+    this.audioElement.loop = true;
+    this.audioElement.preload = 'auto';
+    this.audioElement.crossOrigin = 'anonymous';
+    this.audioElement.volume = this.volume;
+    this.audioElement.addEventListener('error', () => {
+      if (!this.audioCtx) this._initFallback();
+    });
+
+    this.audioElement.play().then(() => {
+      this.isPlaying = true;
+      this.usingAudioElement = true;
+      this.updateButton();
+    }).catch(() => {
+      this._initFallback();
+    });
+  },
+  _initFallback() {
+    if (this.audioCtx) return;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+
+    this.audioCtx = new AudioContext();
+    const masterGain = this.audioCtx.createGain();
+    masterGain.gain.value = this.volume * 0.14;
+    masterGain.connect(this.audioCtx.destination);
+    this.masterGain = masterGain;
+
+    const filter = this.audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 1100;
+    filter.Q.value = 0.8;
+    masterGain.disconnect();
+    masterGain.connect(filter);
+    filter.connect(this.audioCtx.destination);
+
+    const makeVoice = (frequency, type, gainValue) => {
+      const osc = this.audioCtx.createOscillator();
+      osc.type = type;
+      osc.frequency.value = frequency;
+      const voiceGain = this.audioCtx.createGain();
+      voiceGain.gain.value = gainValue;
+      osc.connect(voiceGain);
+      voiceGain.connect(masterGain);
+      osc.start();
+      return { osc, gain: voiceGain };
+    };
+
+    this.regulators.push(makeVoice(110, 'sine', 0.18));
+    this.regulators.push(makeVoice(220, 'triangle', 0.12));
+    this.regulators.push(makeVoice(330, 'triangle', 0.08));
+
+    const lfo = this.audioCtx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = 0.18;
+    const lfoGain = this.audioCtx.createGain();
+    lfoGain.gain.value = 0.04;
+    lfo.connect(lfoGain);
+    lfoGain.connect(masterGain.gain);
+    lfo.start();
+
+    const ambientOsc = this.audioCtx.createOscillator();
+    ambientOsc.type = 'sawtooth';
+    ambientOsc.frequency.value = 55;
+    const ambientGain = this.audioCtx.createGain();
+    ambientGain.gain.value = 0.025;
+    ambientOsc.connect(ambientGain);
+    ambientGain.connect(masterGain);
+    ambientOsc.start();
+    this.regulators.push({ osc: ambientOsc, gain: ambientGain });
+
+    this.isPlaying = true;
+    this.updateButton();
+  },
+  async toggle() {
+    if (!this.audioElement && !this.audioCtx) {
+      this.init();
+      return;
+    }
+
+    if (this.usingAudioElement && this.audioElement) {
+      if (this.isPlaying) {
+        this.audioElement.pause();
+        this.isPlaying = false;
+      } else {
+        await this.audioElement.play().catch(() => {});
+        this.isPlaying = true;
+      }
+      this.updateButton();
+      return;
+    }
+
+    if (!this.audioCtx) {
+      this._initFallback();
+      return;
+    }
+
+    if (this.audioCtx.state === 'suspended') {
+      await this.audioCtx.resume();
+      this.isPlaying = true;
+      this.updateButton();
+      return;
+    }
+    if (this.isPlaying) {
+      this.masterGain.gain.setTargetAtTime(0, this.audioCtx.currentTime, 0.05);
+      this.isPlaying = false;
+    } else {
+      this.masterGain.gain.setTargetAtTime(this.volume * 0.14, this.audioCtx.currentTime, 0.05);
+      this.isPlaying = true;
+    }
+    this.updateButton();
+  },
+  changeVolume(delta) {
+    this.volume = Math.max(0, Math.min(1, this.volume + delta));
+    if (this.audioElement) {
+      this.audioElement.volume = this.volume;
+    }
+    if (this.masterGain) {
+      this.masterGain.gain.setTargetAtTime(this.volume * 0.14, this.audioCtx.currentTime, 0.05);
+    }
+    this.updateButton();
+  },
+  updateButton() {
+    if (!musicToggle) return;
+    if (!this.audioElement && !this.audioCtx) {
+      musicToggle.textContent = 'Música: Iniciar (50%)';
+      return;
+    }
+    const percent = Math.round(this.volume * 100);
+    musicToggle.textContent = `${this.isPlaying ? 'Música: Pausar' : 'Música: Retomar'} (${percent}%)`;
+  },
+};
+
+if (musicToggle) {
+  musicToggle.addEventListener('click', () => {
+    void musicManager.toggle();
+  });
+}
+
+volumeUp?.addEventListener('click', () => {
+  musicManager.changeVolume(0.1);
+});
+
+volumeDown?.addEventListener('click', () => {
+  musicManager.changeVolume(-0.1);
+});
 
 // --- Loop principal ---
 const clock = new THREE.Clock();

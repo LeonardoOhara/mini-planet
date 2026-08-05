@@ -580,18 +580,7 @@ html, body {
 /* Zoom bar on mobile: thin vertical track at right edge */
 @media (max-width: 900px) {
   #zoom-bar {
-    position: fixed;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 14px;
-    height: 220px;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: auto;
-    touch-action: none;
+    display: none !important;
   }
   #zoom-bar .zoom-track {
     position: absolute;
