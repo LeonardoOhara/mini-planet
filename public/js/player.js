@@ -17,6 +17,10 @@ const SPRITE_ANIMATIONS = {
   'walk-back': 4,
   'walk-left': 4,
   'walk-right': 4,
+  'run-forward': 4,
+  'run-back': 4,
+  'run-left': 4,
+  'run-right': 4,
   run: 4,
 };
 
@@ -73,13 +77,14 @@ export class Player {
     return new THREE.CanvasTexture(canvas);
   }
 
-  _getWalkAction(input, right) {
+  _getMovementAction(input, right, isRunning) {
     const forwardAmount = input.dot(this.forward);
     const rightAmount = input.dot(right);
+    const baseAction = isRunning ? 'run' : 'walk';
     if (Math.abs(forwardAmount) >= Math.abs(rightAmount)) {
-      return forwardAmount >= 0 ? 'walk-forward' : 'walk-back';
+      return forwardAmount >= 0 ? `${baseAction}-forward` : `${baseAction}-back`;
     }
-    return rightAmount >= 0 ? 'walk-right' : 'walk-left';
+    return rightAmount >= 0 ? `${baseAction}-right` : `${baseAction}-left`;
   }
 
   _loadSpriteAnimations() {
@@ -194,18 +199,14 @@ export class Player {
     this.position.normalize().multiplyScalar(distanceFromCenter);
     this.group.position.copy(this.position);
 
-    const action = controls.keys.run
-      ? 'run'
-      : isMoving
-      ? this._getWalkAction(input, right)
-      : 'idle';
+    const action = isMoving ? this._getMovementAction(input, right, controls.keys.run) : 'idle';
     this._setAction(action);
 
     this.frameTimer += delta;
     const frames = this.animations[this.currentAction];
     const frameDuration = this.currentAction === 'idle' ? IDLE_FRAME_DURATION : SPRITE_FRAME_DURATION;
     if (frames && frames.length > 1 && this.frameTimer >= frameDuration) {
-      this.frameTimer -= frameDuration;
+      this.frameTimer = 0;
       this.currentFrame = (this.currentFrame + 1) % frames.length;
       this.sprite.material.map = frames[this.currentFrame];
       this.sprite.material.needsUpdate = true;
