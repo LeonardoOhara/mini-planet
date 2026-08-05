@@ -9,15 +9,23 @@ const RUN_SPEED = 15;
 const JUMP_SPEED = 9;
 const GRAVITY = 22;
 const SPRITE_FRAME_DURATION = 0.15;
+const IDLE_FRAME_DURATION = 1.2;
 const SPRITE_PATH_BASE = '/assets/player';
 const SPRITE_ANIMATIONS = {
   idle: 3,
-  walk: 4,
+  'walk-forward': 4,
+  'walk-back': 4,
+  'walk-left': 4,
+  'walk-right': 4,
+  'run-forward': 4,
+  'run-back': 4,
+  'run-left': 4,
+  'run-right': 4,
   run: 4,
 };
 
 export class Player {
-  constructor(scene) {
+  constructor(scene, obstacles = []) {
     this.group = new THREE.Group();
     scene.add(this.group);
 
@@ -28,11 +36,13 @@ export class Player {
     this.isGrounded = true;
     this.walkCycle = 0;
     this.up = new THREE.Vector3(0, 1, 0);
+    this.obstacles = obstacles;
 
     this.currentAction = 'idle';
     this.currentFrame = 0;
     this.frameTimer = 0;
     this.animations = {};
+    this.moveTarget = null;
 
     this.sprite = this._createSprite();
     this.group.add(this.sprite);
@@ -65,6 +75,16 @@ export class Player {
     ctx.textBaseline = 'middle';
     ctx.fillText('P', size / 2, size / 2);
     return new THREE.CanvasTexture(canvas);
+  }
+
+  _getMovementAction(input, right, isRunning) {
+    const forwardAmount = input.dot(this.forward);
+    const rightAmount = input.dot(right);
+    const baseAction = isRunning ? 'run' : 'walk';
+    if (Math.abs(forwardAmount) >= Math.abs(rightAmount)) {
+      return forwardAmount >= 0 ? `${baseAction}-forward` : `${baseAction}-back`;
+    }
+    return rightAmount >= 0 ? `${baseAction}-right` : `${baseAction}-left`;
   }
 
   _loadSpriteAnimations() {
@@ -107,6 +127,10 @@ export class Player {
     }
   }
 
+  setMoveTarget(position) {
+    this.moveTarget = position.clone();
+  }
+
   update(delta, controls) {
     const up = this.up.copy(this.position).normalize();
     this.forward.sub(up.clone().multiplyScalar(this.forward.dot(up))).normalize();
@@ -120,17 +144,42 @@ export class Player {
     const right = new THREE.Vector3().crossVectors(this.forward, up).normalize();
 
     const input = new THREE.Vector3();
-    if (controls.keys.forward) input.add(this.forward);
-    if (controls.keys.backward) input.sub(this.forward);
-    if (controls.keys.right) input.add(right);
-    if (controls.keys.left) input.sub(right);
+    let isMoving = false;
 
-    const isMoving = input.lengthSq() > 0;
+    if (this.moveTarget) {
+      const toTarget = this.moveTarget.clone().sub(this.position);
+      const tangentDirection = toTarget.clone().sub(up.clone().multiplyScalar(toTarget.dot(up)));
+      const tangentDistance = tangentDirection.length();
+
+      if (tangentDistance > 0.001) {
+        const moveDirection = tangentDirection.normalize();
+        input.add(moveDirection);
+        this.forward.lerp(moveDirection, 0.22);
+        isMoving = true;
+
+        if (tangentDistance <= 0.7) {
+          this.moveTarget = null;
+        }
+      } else {
+        this.moveTarget = null;
+      }
+    } else {
+      if (controls.keys.forward) input.add(this.forward);
+      if (controls.keys.backward) input.sub(this.forward);
+      if (controls.keys.right) input.add(right);
+      if (controls.keys.left) input.sub(right);
+      isMoving = input.lengthSq() > 0;
+    }
+
+    const desiredPosition = this.position.clone();
     if (isMoving) {
       input.normalize();
       const speed = controls.keys.run ? RUN_SPEED : WALK_SPEED;
-      this.position.addScaledVector(input, speed * delta);
+      desiredPosition.addScaledVector(input, speed * delta);
     }
+
+    const correctedPosition = this._resolveCollision(desiredPosition);
+    this.position.copy(correctedPosition);
 
     if (controls.keys.jump && this.isGrounded) {
       this.verticalVelocity = JUMP_SPEED;
@@ -150,16 +199,46 @@ export class Player {
     this.position.normalize().multiplyScalar(distanceFromCenter);
     this.group.position.copy(this.position);
 
-    const action = controls.keys.run ? 'run' : isMoving ? 'walk' : 'idle';
+    const action = isMoving ? this._getMovementAction(input, right, controls.keys.run) : 'idle';
     this._setAction(action);
 
     this.frameTimer += delta;
     const frames = this.animations[this.currentAction];
-    if (frames && frames.length > 1 && this.frameTimer >= SPRITE_FRAME_DURATION) {
-      this.frameTimer -= SPRITE_FRAME_DURATION;
+    const frameDuration = this.currentAction === 'idle' ? IDLE_FRAME_DURATION : SPRITE_FRAME_DURATION;
+    if (frames && frames.length > 1 && this.frameTimer >= frameDuration) {
+      this.frameTimer = 0;
       this.currentFrame = (this.currentFrame + 1) % frames.length;
       this.sprite.material.map = frames[this.currentFrame];
       this.sprite.material.needsUpdate = true;
     }
+  }
+
+  _collidesWithObstacle(position) {
+    const playerRadius = 0.75;
+    for (const obstacle of this.obstacles) {
+      const distance = position.distanceTo(obstacle.position);
+      if (distance < obstacle.radius + playerRadius) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  _resolveCollision(position) {
+    const playerRadius = 0.75;
+    let finalPosition = position.clone();
+
+    for (const obstacle of this.obstacles) {
+      const direction = finalPosition.clone().sub(obstacle.position);
+      const distance = direction.length();
+      const minDistance = obstacle.radius + playerRadius;
+      if (distance < minDistance && distance > 0.0001) {
+        const pushDistance = minDistance - distance;
+        direction.normalize();
+        finalPosition.add(direction.multiplyScalar(pushDistance));
+      }
+    }
+
+    return finalPosition;
   }
 }
