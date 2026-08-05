@@ -10,12 +10,18 @@ html, body {
   overflow: hidden;
   background: #000;
   font-family: 'Segoe UI', Arial, sans-serif;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #game-canvas {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
+  touch-action: none;
 }
 
 /* Mira central */
@@ -32,6 +38,11 @@ html, body {
   z-index: 5;
 }
 
+
+.hidden {
+  display: none !important;
+}
+
 /* HUD simples (FPS) */
 #hud {
   position: fixed;
@@ -40,8 +51,295 @@ html, body {
   color: #fff;
   font-size: 13px;
   text-shadow: 0 0 4px rgba(0,0,0,0.8);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 8px 12px;
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  z-index: 5;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#hud .hud-button {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+#hud .hud-button:hover,
+#hud .hud-button:focus {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+#interaction-hint {
+  position: fixed;
+  bottom: calc(22px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  font-size: 15px;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.45);
+  padding: 10px 18px;
+  border-radius: 999px;
+  backdrop-filter: blur(10px);
   z-index: 5;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  max-width: min(92vw, 420px);
+  text-align: center;
+}
+
+#interaction-hint.visible {
+  opacity: 1;
+}
+
+#touch-controls {
+  position: fixed;
+  left: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  right: 12px;
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 6;
+  pointer-events: none;
+}
+
+#touch-controls.visible {
+  pointer-events: all;
+}
+
+.gb-overlay {
+  position: fixed;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.gb-overlay.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.gb-body {
+  width: 300px;
+  max-width: 86vw;
+  background: transparent;
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.28);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,0.04);
+  backdrop-filter: blur(6px);
+}
+
+.gb-screen {
+  width: 58%;
+  height: 96px;
+  background: linear-gradient(#274d2a, #133218);
+  color: #9ef08b;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-family: monospace;
+}
+
+.gb-controls {
+  width: 40%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.gb-dpad {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 6px;
+  align-items: center;
+  justify-items: center;
+}
+
+.gb-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  width: 100%;
+  justify-content: center;
+}
+
+.gb-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  font-weight: 700;
+  touch-action: none;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Analog stick styling */
+.gb-stick {
+  position: fixed;
+  bottom: calc(110px + env(safe-area-inset-bottom));
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  z-index: 9;
+  pointer-events: none;
+  opacity: 0.95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gb-stick-base {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.gb-stick-knob {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.9);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.28);
+  transform: translate(0px, 0px);
+}
+
+#gb-left-stick { left: 14px; }
+#gb-right-stick { right: 14px; }
+
+.radial-control {
+  position: fixed;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  width: 124px;
+  height: 124px;
+  border-radius: 50%;
+  z-index: 6;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.radial-control.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.radial-base {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.24);
+  background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.08) 55%, rgba(255,255,255,0.02) 100%);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 12px 24px rgba(0,0,0,0.2);
+  backdrop-filter: blur(10px);
+}
+
+.radial-knob {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.82);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.26);
+  transform: translate(0, 0);
+}
+
+#radial-left {
+  left: 18px;
+}
+
+#radial-right {
+  right: 18px;
+}
+
+#touch-dpad {
+  display: grid;
+  grid-template-columns: 56px 56px 56px;
+  grid-template-rows: 56px 56px;
+  gap: 10px;
+}
+
+.touch-spacer {
+  width: 56px;
+  height: 56px;
+}
+
+.touch-button {
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 600;
+  box-shadow: 0 12px 18px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(14px);
+  touch-action: none;
+  min-height: 48px;
+}
+
+.touch-button:active {
+  transform: scale(0.97);
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.action-button {
+  width: 130px;
+}
+
+#touch-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+#touch-label {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.82rem;
+  text-align: center;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  width: fit-content;
 }
 
 /* Overlay exibido quando o Pointer Lock está desativado */
@@ -58,6 +356,119 @@ html, body {
 
 #blocker.hidden {
   display: none;
+}
+
+#youtube-overlay,
+#arcade-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  pointer-events: none;
+}
+
+#youtube-overlay.visible,
+#arcade-overlay.visible {
+  pointer-events: auto;
+}
+
+#youtube-overlay .overlay-backdrop,
+#arcade-overlay .overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+}
+
+#youtube-overlay .overlay-content {
+  position: relative;
+  width: min(92vw, 980px);
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 0 120px rgba(0, 0, 0, 0.6);
+  z-index: 1;
+  max-height: min(92vh, 720px);
+}
+
+#youtube-overlay iframe,
+#arcade-overlay iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+#arcade-overlay .overlay-content {
+  position: relative;
+  width: min(86vw, 940px);
+  max-width: min(92vw, 1080px);
+  max-height: min(86vh, 720px);
+  aspect-ratio: 16 / 9;
+  background: #05070e;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 0 140px rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  margin: 0 auto;
+}
+
+#arcade-overlay .arcade-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 46px;
+  padding: 0 18px;
+  background: rgba(10, 13, 24, 0.96);
+  color: #edf2ff;
+  font-size: 0.98rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+}
+
+#arcade-overlay .arcade-titlebar + iframe {
+  height: calc(100% - 46px);
+}
+
+@media (max-width: 768px), (max-height: 720px) {
+  #arcade-overlay .overlay-content {
+    width: min(96vw, 540px);
+    max-width: 96vw;
+    max-height: min(90vh, 760px);
+    aspect-ratio: auto;
+    height: min(92vh, 760px);
+    border-radius: 18px;
+  }
+}
+
+#youtube-close,
+#arcade-close,
+.overlay-close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 2;
+}
+
+#arcade-overlay .arcade-titlebar {
+  position: relative;
+}
+
+#arcade-overlay .arcade-titlebar span {
+  flex: 1;
 }
 
 #instructions {
@@ -81,4 +492,160 @@ html, body {
   margin-top: 18px;
   font-size: 0.85rem;
   opacity: 0.7;
+}
+
+@media (max-width: 640px) {
+  #hud {
+    left: 8px;
+    top: 8px;
+    right: 8px;
+    font-size: 12px;
+  }
+
+  .touch-button {
+    width: 52px;
+    height: 52px;
+    font-size: 1rem;
+  }
+
+  .action-button {
+    width: 110px;
+  }
+
+  .radial-control {
+    width: 96px;
+    height: 96px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+
+  .gb-body {
+    width: min(92vw, 320px);
+    padding: 6px;
+  }
+
+  .gb-stick {
+    bottom: calc(90px + env(safe-area-inset-bottom));
+  }
+
+  .gb-screen {
+    height: 78px;
+  }
+
+  .radial-knob {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* Mobile: hide axis controls (dpad, radial, gb sticks) to enforce touch-look + B-to-walk */
+@media (max-width: 900px) {
+  #touch-dpad {
+    display: none !important;
+  }
+  .radial-control {
+    display: none !important;
+    pointer-events: none !important;
+  }
+  .gb-stick {
+    display: none !important;
+    pointer-events: none !important;
+  }
+  /* keep GB action buttons (A/B) visible */
+  .gb-actions {
+    display: flex !important;
+  }
+}
+
+/* GB orb: small draggable circle above A/B for 360° camera rotation (mobile) */
+@media (max-width: 900px) {
+  #gb-orb {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.95);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+    position: absolute;
+    top: -26px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 12;
+    touch-action: none;
+  }
+}
+
+@media (min-width: 901px) {
+  #gb-orb { display: none !important; }
+}
+
+/* Zoom bar on mobile: thin vertical track at right edge */
+@media (max-width: 900px) {
+  #zoom-bar {
+    display: none !important;
+  }
+  #zoom-bar .zoom-track {
+    position: absolute;
+    width: 6px;
+    height: 100%;
+    background: rgba(255,255,255,0.06);
+    border-radius: 6px;
+    box-shadow: inset 0 0 6px rgba(0,0,0,0.35);
+  }
+  #zoom-bar .zoom-thumb {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: rgba(255,255,255,0.95);
+    border-radius: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    top: 50%;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+    touch-action: none;
+  }
+}
+
+@media (min-width: 901px) {
+  #zoom-bar { display: none !important; }
+}
+
+@media (orientation: landscape) and (max-width: 900px) {
+  #touch-controls {
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 360px;
+    opacity: 0.9;
+  }
+
+  #radial-left,
+  #radial-right {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .radial-control {
+    width: 92px;
+    height: 92px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .radial-knob {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* Hide touch controls on desktop / large screens */
+@media (min-width: 901px) {
+  #touch-controls,
+  #touch-actions,
+  #touch-dpad,
+  .touch-button,
+  .gb-overlay,
+  .gb-stick,
+  .radial-control,
+  .gb-body {
+    display: none !important;
+    pointer-events: none !important;
+  }
 }
