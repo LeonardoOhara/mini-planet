@@ -9,10 +9,14 @@ const RUN_SPEED = 15;
 const JUMP_SPEED = 9;
 const GRAVITY = 22;
 const SPRITE_FRAME_DURATION = 0.15;
+const IDLE_FRAME_DURATION = 1.2;
 const SPRITE_PATH_BASE = '/assets/player';
 const SPRITE_ANIMATIONS = {
   idle: 3,
-  walk: 4,
+  'walk-forward': 4,
+  'walk-back': 4,
+  'walk-left': 4,
+  'walk-right': 4,
   run: 4,
 };
 
@@ -67,6 +71,15 @@ export class Player {
     ctx.textBaseline = 'middle';
     ctx.fillText('P', size / 2, size / 2);
     return new THREE.CanvasTexture(canvas);
+  }
+
+  _getWalkAction(input, right) {
+    const forwardAmount = input.dot(this.forward);
+    const rightAmount = input.dot(right);
+    if (Math.abs(forwardAmount) >= Math.abs(rightAmount)) {
+      return forwardAmount >= 0 ? 'walk-forward' : 'walk-back';
+    }
+    return rightAmount >= 0 ? 'walk-right' : 'walk-left';
   }
 
   _loadSpriteAnimations() {
@@ -181,13 +194,18 @@ export class Player {
     this.position.normalize().multiplyScalar(distanceFromCenter);
     this.group.position.copy(this.position);
 
-    const action = controls.keys.run ? 'run' : isMoving ? 'walk' : 'idle';
+    const action = controls.keys.run
+      ? 'run'
+      : isMoving
+      ? this._getWalkAction(input, right)
+      : 'idle';
     this._setAction(action);
 
     this.frameTimer += delta;
     const frames = this.animations[this.currentAction];
-    if (frames && frames.length > 1 && this.frameTimer >= SPRITE_FRAME_DURATION) {
-      this.frameTimer -= SPRITE_FRAME_DURATION;
+    const frameDuration = this.currentAction === 'idle' ? IDLE_FRAME_DURATION : SPRITE_FRAME_DURATION;
+    if (frames && frames.length > 1 && this.frameTimer >= frameDuration) {
+      this.frameTimer -= frameDuration;
       this.currentFrame = (this.currentFrame + 1) % frames.length;
       this.sprite.material.map = frames[this.currentFrame];
       this.sprite.material.needsUpdate = true;

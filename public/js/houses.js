@@ -1,119 +1,111 @@
 import * as THREE from 'three';
 import { PLANET_RADIUS } from './planet.js';
 
-function createKameHouse() {
+function createSmallBuilding() {
   const house = new THREE.Group();
 
-  // Base cilíndrica (corpo principal da casa)
-  const bodyGeo = new THREE.CylinderGeometry(1.2, 1.2, 1.3, 16);
+  const bodyGeo = new THREE.BoxGeometry(1.6, 2.4, 1.2);
   const bodyMat = new THREE.MeshStandardMaterial({
-    color: 0xd84c2e,
-    roughness: 0.85,
+    color: 0xb5b5b5,
+    roughness: 0.82,
     metalness: 0.05,
   });
   const body = new THREE.Mesh(bodyGeo, bodyMat);
   body.castShadow = true;
   body.receiveShadow = true;
-  body.position.y = 0.65;
+  body.position.y = 1.2;
   house.add(body);
 
-  // Telhado principal (cone vermelho - estilo pagode)
-  const roofMainGeo = new THREE.ConeGeometry(1.35, 0.95, 16);
-  const roofRedMat = new THREE.MeshStandardMaterial({
-    color: 0xc41e3a,
-    roughness: 0.8,
+  const roofGeo = new THREE.BoxGeometry(1.7, 0.15, 1.3);
+  const roofMat = new THREE.MeshStandardMaterial({
+    color: 0x6b6b6b,
+    roughness: 0.7,
     metalness: 0.1,
   });
-  const roofMain = new THREE.Mesh(roofMainGeo, roofRedMat);
-  roofMain.castShadow = true;
-  roofMain.receiveShadow = true;
-  roofMain.position.y = 1.95;
-  house.add(roofMain);
+  const roof = new THREE.Mesh(roofGeo, roofMat);
+  roof.castShadow = true;
+  roof.receiveShadow = true;
+  roof.position.y = 2.475;
+  house.add(roof);
 
-  // Telhado intermediário (disco branco - detalhe pagode)
-  const roofDiscGeo = new THREE.CylinderGeometry(1.42, 1.35, 0.15, 16);
-  const roofWhiteMat = new THREE.MeshStandardMaterial({
-    color: 0xf5f5f5,
-    roughness: 0.75,
-    metalness: 0.0,
-  });
-  const roofDisc = new THREE.Mesh(roofDiscGeo, roofWhiteMat);
-  roofDisc.position.y = 2.0;
-  roofDisc.castShadow = true;
-  roofDisc.receiveShadow = true;
-  house.add(roofDisc);
-
-  // Telhado superior (cone branco menor - cúpula pagode)
-  const roofTopGeo = new THREE.ConeGeometry(0.8, 0.6, 16);
-  const roofTopMat = new THREE.MeshStandardMaterial({
-    color: 0xe8e8e8,
-    roughness: 0.8,
+  const windowFrameMat = new THREE.MeshStandardMaterial({
+    color: 0x2b2b2b,
+    roughness: 0.9,
     metalness: 0.05,
   });
-  const roofTop = new THREE.Mesh(roofTopGeo, roofTopMat);
-  roofTop.castShadow = true;
-  roofTop.receiveShadow = true;
-  roofTop.position.y = 2.7;
-  house.add(roofTop);
-
-  // Base/anel do telhado (detalhe branco)
-  const roofRimGeo = new THREE.CylinderGeometry(1.5, 1.42, 0.1, 16);
-  const roofRim = new THREE.Mesh(roofRimGeo, roofWhiteMat);
-  roofRim.position.y = 1.98;
-  roofRim.castShadow = true;
-  house.add(roofRim);
-
-  // Janela frontal grande (circular)
-  const windowGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.08, 16);
-  const windowMat = new THREE.MeshStandardMaterial({
-    color: 0x87ceeb,
-    roughness: 0.5,
-    metalness: 0.4,
-    emissive: 0x4da6ff,
-    emissiveIntensity: 0.15,
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: 0x87c1ff,
+    roughness: 0.2,
+    metalness: 0.3,
+    emissive: 0x2f6fb3,
+    emissiveIntensity: 0.08,
+    opacity: 0.88,
+    transparent: true,
   });
-  const window1 = new THREE.Mesh(windowGeo, windowMat);
-  window1.position.set(0, 1.0, 1.22);
-  window1.rotation.y = Math.PI / 2;
-  window1.castShadow = false;
-  house.add(window1);
 
-  // Janela lateral 1
-  const window2 = new THREE.Mesh(windowGeo, windowMat);
-  window2.position.set(0.9, 1.0, 0.75);
-  window2.rotation.y = Math.PI / 6;
-  window2.castShadow = false;
-  house.add(window2);
+  const windowWidth = 0.3;
+  const windowHeight = 0.4;
+  const windowDepth = 0.06;
+  const frameThickness = 0.05;
 
-  // Janela lateral 2
-  const window3 = new THREE.Mesh(windowGeo, windowMat);
-  window3.position.set(-0.9, 1.0, 0.75);
-  window3.rotation.y = -Math.PI / 6;
-  window3.castShadow = false;
-  house.add(window3);
+  const createWindow = (x, y, z, ry = 0) => {
+    const frame = new THREE.Mesh(
+      new THREE.BoxGeometry(windowWidth + frameThickness, windowHeight + frameThickness, windowDepth),
+      windowFrameMat
+    );
+    frame.position.set(x, y, z);
+    frame.rotation.y = ry;
+    frame.castShadow = false;
+    house.add(frame);
 
-  // Porta frontal
-  const doorGeo = new THREE.BoxGeometry(0.5, 0.8, 0.08);
+    const glass = new THREE.Mesh(
+      new THREE.BoxGeometry(windowWidth, windowHeight, windowDepth / 2),
+      glassMat
+    );
+    glass.position.set(x, y, z + 0.01);
+    glass.rotation.y = ry;
+    glass.castShadow = false;
+    house.add(glass);
+  };
+
+  createWindow(0, 1.6, 0.61);
+  createWindow(0, 0.9, 0.61);
+  createWindow(0.6, 1.6, 0.27, Math.PI / 2);
+  createWindow(-0.6, 1.6, 0.27, Math.PI / 2);
+
+  const doorGeo = new THREE.BoxGeometry(0.45, 0.95, 0.07);
   const doorMat = new THREE.MeshStandardMaterial({
-    color: 0x8b4513,
-    roughness: 0.9,
-    metalness: 0.0,
+    color: 0x4a2f1b,
+    roughness: 0.92,
+    metalness: 0.02,
   });
   const door = new THREE.Mesh(doorGeo, doorMat);
-  door.position.set(0, 0.3, 1.22);
+  door.position.set(0, 0.475, 0.61);
   door.castShadow = true;
+  door.receiveShadow = true;
   house.add(door);
 
-  // Maçaneta da porta
-  const knobGeo = new THREE.SphereGeometry(0.08, 8, 8);
-  const knobMat = new THREE.MeshStandardMaterial({
-    color: 0xffd700,
-    roughness: 0.3,
-    metalness: 0.8,
-  });
-  const knob = new THREE.Mesh(knobGeo, knobMat);
-  knob.position.set(0.2, 0.3, 1.3);
+  const knob = new THREE.Mesh(
+    new THREE.SphereGeometry(0.045, 8, 8),
+    new THREE.MeshStandardMaterial({
+      color: 0xffd973,
+      roughness: 0.3,
+      metalness: 0.8,
+    })
+  );
+  knob.position.set(0.18, 0.45, 0.68);
   house.add(knob);
+
+  const balconyGeo = new THREE.BoxGeometry(0.9, 0.08, 0.2);
+  const balconyMat = new THREE.MeshStandardMaterial({
+    color: 0x4d4d4d,
+    roughness: 0.85,
+    metalness: 0.1,
+  });
+  const balcony = new THREE.Mesh(balconyGeo, balconyMat);
+  balcony.position.set(0, 1.05, 0.66);
+  balcony.castShadow = false;
+  house.add(balcony);
 
   return house;
 }
@@ -122,14 +114,13 @@ export function createHouses(scene, count = 1) {
   const houses = new THREE.Group();
   const obstacles = [];
 
-  // Criar apenas uma Kame House em posição destacada
   const dir = new THREE.Vector3(0, 1, 0.5).normalize();
-  const kameHouse = createKameHouse();
+  const smallBuilding = createSmallBuilding();
   const pos = dir.clone().multiplyScalar(PLANET_RADIUS);
-  kameHouse.position.copy(pos);
-  kameHouse.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-  kameHouse.rotateY(0); // Sem rotação aleatória para manter orientação
-  houses.add(kameHouse);
+  smallBuilding.position.copy(pos);
+  smallBuilding.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+  smallBuilding.rotateY(0);
+  houses.add(smallBuilding);
 
   obstacles.push({
     position: pos.clone(),
